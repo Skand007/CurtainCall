@@ -1,0 +1,13 @@
+{% extends "tracker/base.html" %}
+{% block title %}{{ owner.username }} · Watchlog{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <div>
+    <h1>{{ owner.username }}</h1>
+    <p class="muted">{% for c in counts %}{{ c.n }} {{ c.status }}{% if not forloop.last %} · {% endif %}{% endfor %}</p>
+  </div>
+  <a class="button secondary" href="{% url 'stats' owner.username %}">Stats</a>
+</div>
+{% include "tracker/_filters.html" %}
+{% include "tracker/_grid.html" %}
+{% endblock %}

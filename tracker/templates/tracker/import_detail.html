@@ -1,0 +1,17 @@
+{% extends "tracker/base.html" %}
+{% block title %}{{ batch.filename }} · Watchlog{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <h1>{{ batch.filename }}</h1>
+  <a href="{% url 'import_list' %}">All imports</a>
+</div>
+{% include "tracker/_import_progress.html" %}
+
+{% if review_rows %}
+  <h2>Needs a decision ({{ review_rows|length }})</h2>
+  <p class="muted">Pick the right match, search again with a corrected title or year, or skip it.</p>
+  {% for row in review_rows %}{% include "tracker/_review_row.html" %}{% endfor %}
+{% elif not progress.pending %}
+  <p>Everything in this file is settled. <a href="{% url 'library' %}">Go to your library →</a></p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: watchlog
+          POSTGRES_PASSWORD: watchlog
+          POSTGRES_DB: watchlog
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U watchlog"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgres://watchlog:watchlog@localhost:5432/watchlog
+      SECRET_KEY: ci-only-not-secret
+      DEBUG: "1"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Lint
+        run: |
+          ruff check .
+          ruff format --check .
+
+      - name: Migrations are up to date
+        run: python manage.py makemigrations --check --dry-run
+
+      - name: Tests (against Postgres)
+        run: pytest -q
+
+      - name: Data checks on a migrated database
+        run: |
+          python manage.py migrate --noinput
+          python manage.py check_data
+
+      - name: Production settings check
+        env:
+          DEBUG: "0"
+          ALLOWED_HOSTS: example.onrender.com
+        run: python manage.py check --deploy --fail-level ERROR

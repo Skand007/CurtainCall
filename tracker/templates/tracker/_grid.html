@@ -1,0 +1,33 @@
+<div id="grid">
+  <p class="muted">{{ page.paginator.count }} title{{ page.paginator.count|pluralize }}</p>
+  <div class="grid">
+    {% for e in page %}
+      <a class="poster" href="{% url 'title' e.title.pk %}" title="{{ e.title }}">
+        {% if e.title.poster_url %}
+          <img src="{{ e.title.poster_url }}" alt="" loading="lazy">
+        {% else %}
+          <div class="noposter">{{ e.title.name }}</div>
+        {% endif %}
+        <span class="caption">
+          <span class="name">{{ e.title.name }}</span>
+          <span class="meta">{{ e.title.year|default:"" }}{% if e.rating %} · ★ {{ e.rating }}{% endif %}{% if e.status != "watched" %} · {{ e.get_status_display }}{% endif %}</span>
+        </span>
+      </a>
+    {% empty %}
+      <p class="muted">Nothing here yet.</p>
+    {% endfor %}
+  </div>
+  {% if page.has_other_pages %}
+    <nav class="pager">
+      {% if page.has_previous %}
+        <a hx-get="{{ request.path }}?{% for k, v in params.items %}{% if k != 'page' %}{{ k }}={{ v|urlencode }}&{% endif %}{% endfor %}page={{ page.previous_page_number }}"
+           hx-target="#grid" hx-swap="outerHTML" hx-push-url="true" href="#">← Previous</a>
+      {% endif %}
+      <span class="muted">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+      {% if page.has_next %}
+        <a hx-get="{{ request.path }}?{% for k, v in params.items %}{% if k != 'page' %}{{ k }}={{ v|urlencode }}&{% endif %}{% endfor %}page={{ page.next_page_number }}"
+           hx-target="#grid" hx-swap="outerHTML" hx-push-url="true" href="#">Next →</a>
+      {% endif %}
+    </nav>
+  {% endif %}
+</div>

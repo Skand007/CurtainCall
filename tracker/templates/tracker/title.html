@@ -1,0 +1,67 @@
+{% extends "tracker/base.html" %}
+{% block title %}{{ title }} · Watchlog{% endblock %}
+{% block content %}
+<article class="detail">
+  <div class="detail-poster">
+    {% if title.poster_url %}<img src="{{ title.poster_url }}" alt="Poster for {{ title.name }}">{% else %}<div class="noposter big">{{ title.name }}</div>{% endif %}
+  </div>
+  <div>
+    <h1>{{ title.name }} <span class="muted">{{ title.year|default:"" }}</span></h1>
+    {% if title.original_name and title.original_name != title.name %}<p class="muted">{{ title.original_name }}</p>{% endif %}
+    <p class="tags">
+      <span class="pill">{{ title.get_kind_display }}</span>
+      {% for g in title.genres %}<span class="pill">{{ g }}</span>{% endfor %}
+    </p>
+    <dl class="facts">
+      {% if title.directors %}<dt>{% if title.kind == "movie" %}Directed by{% elif title.kind == "anime" %}Studio{% else %}Created by{% endif %}</dt><dd>{{ title.directors|join:", " }}</dd>{% endif %}
+      {% if title.runtime_minutes %}<dt>Runtime</dt><dd>{{ title.runtime_minutes }} min{% if title.episodes %} across {{ title.episodes }} episode{{ title.episodes|pluralize }}{% endif %}</dd>{% endif %}
+      {% if title.external_score %}<dt>{{ title.get_source_display }} score</dt><dd>{{ title.external_score|floatformat:1 }} / 10</dd>{% endif %}
+    </dl>
+    <p class="overview">{{ title.overview|linebreaksbr }}</p>
+    <p><a href="{{ title.source_url }}" target="_blank" rel="noopener">View on {{ title.get_source_display }} ↗</a></p>
+
+    {% if user.is_authenticated %}
+      <section class="card">
+        {% if entry %}
+          <form hx-post="{% url 'update_entry' entry.pk %}" hx-target="#save-state" hx-trigger="change">
+            <label>Status
+              <select name="status">
+                {% for value, label in status_choices %}<option value="{{ value }}" {% if entry.status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+              </select>
+            </label>
+            <label>Rating
+              <select name="rating">
+                <option value="">No rating</option>
+                <option value="0.5" {% if entry.rating == 0.5 %}selected{% endif %}>½</option>
+                <option value="1" {% if entry.rating == 1 %}selected{% endif %}>★</option>
+                <option value="1.5" {% if entry.rating == 1.5 %}selected{% endif %}>★½</option>
+                <option value="2" {% if entry.rating == 2 %}selected{% endif %}>★★</option>
+                <option value="2.5" {% if entry.rating == 2.5 %}selected{% endif %}>★★½</option>
+                <option value="3" {% if entry.rating == 3 %}selected{% endif %}>★★★</option>
+                <option value="3.5" {% if entry.rating == 3.5 %}selected{% endif %}>★★★½</option>
+                <option value="4" {% if entry.rating == 4 %}selected{% endif %}>★★★★</option>
+                <option value="4.5" {% if entry.rating == 4.5 %}selected{% endif %}>★★★★½</option>
+                <option value="5" {% if entry.rating == 5 %}selected{% endif %}>★★★★★</option>
+              </select>
+            </label>
+            <label>Watched on <input type="date" name="watched_on" value="{{ entry.watched_on|date:'Y-m-d' }}"></label>
+            <label class="wide">Notes <textarea name="notes" rows="3">{{ entry.notes }}</textarea></label>
+            <span id="save-state"></span>
+          </form>
+          <form method="post" action="{% url 'delete_entry' entry.pk %}" onsubmit="return confirm('Remove from your library?')">
+            {% csrf_token %}<button class="link danger">Remove from library</button>
+          </form>
+        {% else %}
+          <form hx-post="{% url 'add_title' %}" hx-swap="outerHTML">
+            <input type="hidden" name="source" value="{{ title.source }}">
+            <input type="hidden" name="kind" value="{{ title.kind }}">
+            <input type="hidden" name="source_id" value="{{ title.source_id }}">
+            <button class="button" name="status" value="watched">Mark watched</button>
+            <button class="button secondary" name="status" value="planned">Plan to watch</button>
+          </form>
+        {% endif %}
+      </section>
+    {% endif %}
+  </div>
+</article>
+{% endblock %}

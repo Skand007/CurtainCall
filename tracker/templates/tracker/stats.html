@@ -1,0 +1,56 @@
+{% extends "tracker/base.html" %}
+{% block title %}{{ owner.username }}'s stats · Watchlog{% endblock %}
+{% block head %}<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <h1>{{ owner.username }}'s stats</h1>
+  <a href="{% url 'profile' owner.username %}">Library →</a>
+</div>
+
+<div class="tiles">
+  <div class="tile"><span class="big">{{ stats.total }}</span><span class="muted">titles watched</span></div>
+  <div class="tile"><span class="big">{{ stats.hours|default:0 }}</span><span class="muted">hours{% if stats.missing_runtime %} ({{ stats.missing_runtime }} without runtime){% endif %}</span></div>
+  <div class="tile"><span class="big">{{ stats.live_action }}</span><span class="muted">live-action</span></div>
+  <div class="tile"><span class="big">{{ stats.animated }}</span><span class="muted">animated</span></div>
+</div>
+
+<div class="charts">
+  <section class="card"><h2>By release decade</h2><canvas id="decades" height="220"></canvas></section>
+  <section class="card"><h2>Your ratings</h2><canvas id="ratings" height="220"></canvas></section>
+</div>
+
+<div class="charts">
+  <section class="card">
+    <h2>Top genres</h2>
+    <ol class="ranked">{% for name, n in stats.genres %}<li><span>{{ name }}</span><span class="muted">{{ n }}</span></li>{% empty %}<li class="muted">No genre data yet</li>{% endfor %}</ol>
+  </section>
+  <section class="card">
+    <h2>Most-watched directors</h2>
+    <ol class="ranked">{% for name, n in stats.directors %}<li><span>{{ name }}</span><span class="muted">{{ n }}</span></li>{% empty %}<li class="muted">No director data yet</li>{% endfor %}</ol>
+  </section>
+  <section class="card">
+    <h2>Anime studios</h2>
+    <ol class="ranked">{% for name, n in stats.studios %}<li><span>{{ name }}</span><span class="muted">{{ n }}</span></li>{% empty %}<li class="muted">No studio data yet</li>{% endfor %}</ol>
+  </section>
+</div>
+
+{{ stats.decades|json_script:"decades-data" }}
+{{ stats.ratings|json_script:"ratings-data" }}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  var accent = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#3b82f6";
+  var ink = getComputedStyle(document.documentElement).getPropertyValue("--muted").trim() || "#888";
+  Chart.defaults.color = ink;
+  function bar(id, dataId) {
+    var d = JSON.parse(document.getElementById(dataId).textContent);
+    new Chart(document.getElementById(id), {
+      type: "bar",
+      data: { labels: d.labels, datasets: [{ data: d.values, backgroundColor: accent, borderRadius: 3 }] },
+      options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { grid: { display: false } } } }
+    });
+  }
+  bar("decades", "decades-data");
+  bar("ratings", "ratings-data");
+});
+</script>
+{% endblock %}

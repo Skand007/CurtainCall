@@ -1,0 +1,35 @@
+{% extends "tracker/base.html" %}
+{% block title %}Import · Watchlog{% endblock %}
+{% block content %}
+<h1>Import a list</h1>
+<section class="card">
+  <p>Upload a CSV with a <code>Title</code> column and an optional <code>Year</code> column (the Letterboxd import format works as is).
+  Each row is matched to TMDB or AniList; anything ambiguous waits for you to pick.</p>
+  <form method="post" enctype="multipart/form-data" class="stack">
+    {% csrf_token %}
+    <input type="file" name="file" accept=".csv,text/csv" required>
+    <fieldset>
+      <legend>What's in this list?</legend>
+      <label><input type="radio" name="hint" value="movie" checked> Live-action films and series</label>
+      <label><input type="radio" name="hint" value="animated"> Animation and anime</label>
+    </fieldset>
+    <button class="button">Upload</button>
+  </form>
+</section>
+
+{% if batches %}
+<h2>Previous imports</h2>
+<table class="table">
+  <thead><tr><th>File</th><th>Rows</th><th>Waiting</th><th>To review</th><th>Uploaded</th></tr></thead>
+  <tbody>
+  {% for b in batches %}
+    <tr>
+      <td><a href="{% url 'import_detail' b.pk %}">{{ b.filename }}</a></td>
+      <td>{{ b.total }}</td><td>{{ b.pending }}</td><td>{{ b.review }}</td>
+      <td>{{ b.created_at|date:"j M Y, H:i" }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}

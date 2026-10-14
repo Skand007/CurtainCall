@@ -1,0 +1,36 @@
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Watchlog{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'tracker/style.css' %}">
+  <script src="https://unpkg.com/htmx.org@2.0.4" defer></script>
+  {% block head %}{% endblock %}
+</head>
+<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+  <header class="topbar">
+    <a class="brand" href="{% url 'home' %}">Watchlog</a>
+    <nav>
+      {% if user.is_authenticated %}
+        <a href="{% url 'library' %}">Library</a>
+        <a href="{% url 'search' %}">Add</a>
+        <a href="{% url 'import_list' %}">Import</a>
+        <a href="{% url 'profile' user.username %}">Profile</a>
+        <a href="{% url 'stats' user.username %}">Stats</a>
+        <form method="post" action="{% url 'logout' %}" class="inline">{% csrf_token %}<button class="link">Log out</button></form>
+      {% else %}
+        <a href="{% url 'login' %}">Log in</a>
+      {% endif %}
+    </nav>
+  </header>
+  <main>
+    {% for message in messages %}<div class="flash {{ message.tags }}">{{ message }}</div>{% endfor %}
+    {% block content %}{% endblock %}
+  </main>
+  <footer>
+    Film and series data from <a href="https://www.themoviedb.org/">TMDB</a>. This product uses the TMDB API but is not endorsed or certified by TMDB.
+    Anime data from <a href="https://anilist.co/">AniList</a>.
+  </footer>
+</body>
+</html>

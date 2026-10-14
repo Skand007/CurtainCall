@@ -1,0 +1,22 @@
+<form class="filters" hx-get="{{ request.path }}" hx-target="#grid" hx-swap="outerHTML" hx-push-url="true"
+      hx-trigger="change, input from:#q delay:300ms">
+  <input id="q" type="search" name="q" placeholder="Filter by title" value="{{ params.q|default:'' }}">
+  <select name="kind">
+    <option value="">All types</option>
+    {% for value, label in kind_choices %}
+      <option value="{{ value }}" {% if params.kind == value %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <select name="status">
+    <option value="">Any status</option>
+    {% for value, label in status_choices %}
+      <option value="{{ value }}" {% if params.status == value %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <select name="sort">
+    <option value="recent" {% if params.sort == "recent" %}selected{% endif %}>Recently updated</option>
+    <option value="name" {% if params.sort == "name" %}selected{% endif %}>Title A–Z</option>
+    <option value="year" {% if params.sort == "year" %}selected{% endif %}>Release year</option>
+    <option value="rating" {% if params.sort == "rating" %}selected{% endif %}>Your rating</option>
+  </select>
+</form>

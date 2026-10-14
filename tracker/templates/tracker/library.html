@@ -1,0 +1,10 @@
+{% extends "tracker/base.html" %}
+{% block title %}Library · Watchlog{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <h1>Your library</h1>
+  <a class="button" href="{% url 'search' %}">Add a title</a>
+</div>
+{% include "tracker/_filters.html" %}
+{% include "tracker/_grid.html" %}
+{% endblock %}

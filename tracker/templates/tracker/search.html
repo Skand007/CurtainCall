@@ -1,0 +1,16 @@
+{% extends "tracker/base.html" %}
+{% block title %}Add a title · Watchlog{% endblock %}
+{% block content %}
+<h1>Add a title</h1>
+<form class="filters" hx-get="{% url 'search' %}" hx-target="#results" hx-push-url="true"
+      hx-trigger="submit, change from:select, input from:#sq delay:500ms">
+  <input id="sq" type="search" name="q" value="{{ query }}" placeholder="Search by title" autofocus>
+  <select name="source">
+    <option value="movie" {% if source == "movie" %}selected{% endif %}>Films (TMDB)</option>
+    <option value="tv" {% if source == "tv" %}selected{% endif %}>Series (TMDB)</option>
+    <option value="anime" {% if source == "anime" %}selected{% endif %}>Anime (AniList)</option>
+  </select>
+  <button class="button">Search</button>
+</form>
+<div id="results">{% include "tracker/_search_results.html" %}</div>
+{% endblock %}

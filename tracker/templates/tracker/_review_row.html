@@ -1,0 +1,31 @@
+<div class="card review" id="row-{{ row.pk }}">
+  <div class="review-head">
+    <strong>{{ row.raw_title }}</strong> <span class="muted">{{ row.raw_year|default:"no year" }}</span>
+    <span class="pill {% if row.state == 'matched' %}ok{% endif %}">{{ row.get_state_display }}</span>
+    {% if row.matched_title %}→ <a href="{% url 'title' row.matched_title.pk %}">{{ row.matched_title }}</a>{% endif %}
+  </div>
+
+  {% if row.state == "review" or row.state == "not_found" %}
+    {% if row.candidates %}
+      <form hx-post="{% url 'import_resolve' row.pk %}" hx-target="#row-{{ row.pk }}" hx-swap="outerHTML" class="candidates">
+        {% for c in row.candidates %}
+          <label class="candidate">
+            <input type="radio" name="choice" value="{{ forloop.counter0 }}" required>
+            {% if c.poster_url %}<img src="{{ c.poster_url }}" alt="" loading="lazy">{% else %}<span class="noposter small"></span>{% endif %}
+            <span>{{ c.name }} <span class="muted">{{ c.year|default:"?" }} · {{ c.kind }} · {{ c.source }}</span></span>
+          </label>
+        {% endfor %}
+        <button class="button" name="action" value="pick">Use selected</button>
+      </form>
+    {% endif %}
+    <form hx-post="{% url 'import_resolve' row.pk %}" hx-target="#row-{{ row.pk }}" hx-swap="outerHTML" class="inline-form">
+      <input name="title" value="{{ row.raw_title }}" aria-label="Title">
+      <input name="year" value="{{ row.raw_year|default:'' }}" size="4" placeholder="Year" aria-label="Year">
+      <select name="kind" aria-label="Type">
+        {% for value, label in kinds %}<option value="{{ value }}" {% if value == "anime" and row.batch.hint == "animated" %}selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+      <button class="button secondary" name="action" value="retry">Search again</button>
+      <button class="link" name="action" value="skip" formnovalidate>Skip</button>
+    </form>
+  {% endif %}
+</div>

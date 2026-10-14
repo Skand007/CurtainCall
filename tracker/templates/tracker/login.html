@@ -1,0 +1,15 @@
+{% extends "tracker/base.html" %}
+{% block title %}Log in · Watchlog{% endblock %}
+{% block content %}
+<section class="narrow card">
+  <h1>Log in</h1>
+  <form method="post">
+    {% csrf_token %}
+    {% if form.errors %}<p class="error">Username or password is wrong.</p>{% endif %}
+    <label>Username <input name="username" autocomplete="username" required></label>
+    <label>Password <input type="password" name="password" autocomplete="current-password" required></label>
+    <input type="hidden" name="next" value="{{ next }}">
+    <button class="button">Log in</button>
+  </form>
+</section>
+{% endblock %}

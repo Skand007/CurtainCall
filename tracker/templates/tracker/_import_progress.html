@@ -1,0 +1,17 @@
+<div id="progress" class="card"
+  {% if progress.pending and not error %}hx-post="{% url 'import_process' batch.pk %}" hx-trigger="load delay:200ms" hx-swap="outerHTML"{% endif %}>
+  <div class="bar"><span style="width: {{ progress.percent }}%"></span></div>
+  <p>
+    {{ progress.done }} of {{ progress.total }} rows checked ·
+    {{ progress.counts.matched|default:0 }} matched ·
+    {{ progress.counts.review|default:0 }} to review ·
+    {{ progress.counts.not_found|default:0 }} not found ·
+    {{ progress.counts.skipped|default:0 }} skipped
+  </p>
+  {% if error %}
+    <p class="error">Stopped: {{ error }}</p>
+    <button class="button" hx-post="{% url 'import_process' batch.pk %}" hx-target="#progress" hx-swap="outerHTML">Resume</button>
+  {% elif progress.pending %}
+    <p class="muted">Matching… keep this page open. If you close it, opening it again picks up where it stopped.</p>
+  {% endif %}
+</div>
