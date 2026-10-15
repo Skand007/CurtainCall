@@ -1,9 +1,9 @@
-# Watchlog
+# CurtainCall
 
 A personal tracker for films, series and anime in one library, with metadata pulled from
 [TMDB](https://www.themoviedb.org/) and [AniList](https://anilist.co/).
 
-**Live demo:** _add your Render URL here_
+**Live demo:** _add your Render URL here_ · **Code:** https://github.com/Skand007/CurtainCall
 
 ## Features
 

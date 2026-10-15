@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: watchlog
+    name: curtaincall
     runtime: python
     plan: free
     region: frankfurt

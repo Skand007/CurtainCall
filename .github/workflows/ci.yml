@@ -13,18 +13,18 @@ jobs:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_USER: watchlog
-          POSTGRES_PASSWORD: watchlog
-          POSTGRES_DB: watchlog
+          POSTGRES_USER: curtaincall
+          POSTGRES_PASSWORD: curtaincall
+          POSTGRES_DB: curtaincall
         ports: ["5432:5432"]
         options: >-
-          --health-cmd "pg_isready -U watchlog"
+          --health-cmd "pg_isready -U curtaincall"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
 
     env:
-      DATABASE_URL: postgres://watchlog:watchlog@localhost:5432/watchlog
+      DATABASE_URL: postgres://curtaincall:curtaincall@localhost:5432/curtaincall
       SECRET_KEY: ci-only-not-secret
       DEBUG: "1"
 
