@@ -3,7 +3,7 @@
 A personal tracker for films, series and anime in one library, with metadata pulled from
 [TMDB](https://www.themoviedb.org/) and [AniList](https://anilist.co/).
 
-**Live demo:** _add your Render URL here_ · **Code:** https://github.com/Skand007/CurtainCall
+**Live demo:** https://curtaincall-ybpj.onrender.com/library/ · **Code:** https://github.com/Skand007/CurtainCall
 
 ## Features
 
