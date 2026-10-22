@@ -1,0 +1,11 @@
+<div class="dup-prompt" role="alert">
+  <p>You already have <a href="{% url 'title' twin.pk %}">{{ twin }}</a> from {{ twin.get_source_display }}. Is this the same title?</p>
+  <form hx-post="{% url 'add_title' %}" hx-target="closest .dup-prompt" hx-swap="outerHTML">
+    <input type="hidden" name="source" value="{{ source }}">
+    <input type="hidden" name="kind" value="{{ kind }}">
+    <input type="hidden" name="source_id" value="{{ source_id }}">
+    <input type="hidden" name="status" value="{{ status }}">
+    <button class="button" name="use_title" value="{{ twin.pk }}">Yes, keep the one I have</button>
+    <button class="button secondary" name="confirm" value="1">No, add it separately</button>
+  </form>
+</div>

@@ -19,11 +19,26 @@
     </details>
   </section>
   <section class="card">
-    <h2>Ratings given</h2>
-    <div class="chart-box"><canvas id="ratings" role="img" aria-label="Bar chart of how many titles received each star rating"></canvas></div>
+    <h2>Critics and audiences</h2>
+    <p class="muted small chart-note">
+      How the titles {{ owner_name }} watched were scored.
+      {% if stats.scores.critics_n or stats.scores.audience_n %}
+        Critics average {{ stats.scores.critics_avg|default:"–" }}% across {{ stats.scores.critics_n }} titles, audiences {{ stats.scores.audience_avg|default:"–" }}% across {{ stats.scores.audience_n }}.
+      {% else %}
+        Scores appear once the nightly refresh has fetched them.
+      {% endif %}
+    </p>
+    <ul class="legend" aria-hidden="true">
+      <li><span class="swatch critics"></span>Critics (Rotten Tomatoes)</li>
+      <li><span class="swatch audience"></span>Audience (IMDb users, out of 100)</li>
+    </ul>
+    <div class="chart-box"><canvas id="scores" role="img" aria-label="Grouped bar chart comparing how many titles fall in each 10-point score band for Rotten Tomatoes critics and IMDb users"></canvas></div>
     <details class="as-table">
       <summary>Show as a table</summary>
-      <table><tbody>{% for label, value in rating_rows %}<tr><th scope="row">{{ label }} stars</th><td>{{ value }}</td></tr>{% endfor %}</tbody></table>
+      <table>
+        <thead><tr><th>Score</th><th>Critics</th><th>Audience</th></tr></thead>
+        <tbody>{% for label, critics, audience in score_rows %}<tr><th scope="row">{{ label }}</th><td>{{ critics }}</td><td>{{ audience }}</td></tr>{% endfor %}</tbody>
+      </table>
     </details>
   </section>
 </div>
@@ -44,7 +59,7 @@
 </div>
 
 {{ stats.decades|json_script:"decades-data" }}
-{{ stats.ratings|json_script:"ratings-data" }}
+{{ stats.scores|json_script:"scores-data" }}
 <script>
 document.addEventListener("DOMContentLoaded", function () {
   var css = getComputedStyle(document.documentElement);
@@ -77,7 +92,35 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
   bar("decades", "decades-data", "");
-  bar("ratings", "ratings-data", "Stars");
+
+  // Critics vs audience: one grouped chart, two series, a 2px surface gap between the bars of a pair.
+  var sc = JSON.parse(document.getElementById("scores-data").textContent);
+  var surface = css.getPropertyValue("--surface").trim();
+  var audience = css.getPropertyValue("--audience").trim();
+  function series(label, values, color) {
+    return { label: label, data: values, backgroundColor: color, borderColor: surface, borderWidth: { left: 1, right: 1 },
+             borderRadius: 4, borderSkipped: "start", maxBarThickness: 18, categoryPercentage: 0.7, barPercentage: 0.95 };
+  }
+  new Chart(document.getElementById("scores"), {
+    type: "bar",
+    data: { labels: sc.labels, datasets: [series("Critics", sc.critics, accent), series("Audience", sc.audience, audience)] },
+    options: {
+      maintainAspectRatio: false,
+      animation: reduce ? false : { duration: 300 },
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: {
+          title: function (items) { return "Scored " + items[0].label; },
+          label: function (c) { return " " + c.dataset.label + ": " + c.parsed.y + " title" + (c.parsed.y === 1 ? "" : "s"); }
+        } }
+      },
+      scales: {
+        y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: hairline }, border: { display: false } },
+        x: { grid: { display: false }, border: { display: false } }
+      }
+    }
+  });
 });
 </script>
 {% endblock %}

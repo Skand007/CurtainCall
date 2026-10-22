@@ -106,6 +106,10 @@ OWNER_USERNAME = os.environ.get("OWNER_USERNAME", "")
 # External APIs
 TMDB_TOKEN = os.environ.get("TMDB_TOKEN", "")
 TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w342"
+OMDB_API_KEY = os.environ.get("OMDB_API_KEY", "")  # IMDb ratings and Rotten Tomatoes critics scores
+
+# Shared secret for the nightly refresh job (GitHub Actions sends it in a header). Empty disables the endpoint.
+REFRESH_TOKEN = os.environ.get("REFRESH_TOKEN", "")
 
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")

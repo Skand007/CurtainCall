@@ -1,0 +1,10 @@
+{% load tracker_extras %}<a class="poster shelf-item" href="{% url 'title' e.title.pk %}">
+  <span class="art"><img src="{{ e.title.poster_url }}" alt="" loading="lazy" width="148" height="222"></span>
+  <span class="caption">
+    <span class="name">{{ e.title.name }}</span>
+    <span class="meta">
+      <span>{{ e.title.year|default:"" }}</span>
+      {% if e.rating %}<span class="stars" aria-label="Rated {{ e.rating }} out of 5">{{ e.rating|stars }}</span>{% endif %}
+    </span>
+  </span>
+</a>

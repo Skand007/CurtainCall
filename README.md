@@ -3,20 +3,29 @@
 A personal tracker for films, series and anime in one library, with metadata pulled from
 [TMDB](https://www.themoviedb.org/) and [AniList](https://anilist.co/).
 
-**Live demo:** https://curtaincall-ybpj.onrender.com/library/ · **Code:** https://github.com/Skand007/CurtainCall
+**Live site:** https://curtaincall-ybpj.onrender.com/
+
+Film and series data from [TMDB](https://www.themoviedb.org/), anime from [AniList](https://anilist.co/), IMDb ratings and Rotten Tomatoes critics' scores via [OMDb](https://www.omdbapi.com/).
 
 ## Features
 
 - **One library for everything:** films and series from TMDB, anime from AniList, with status
-  (watched, watching, planned, dropped), half-star ratings, watch dates and notes.
+  (watched, watching, planned, dropped), half-star ratings, watch dates and private notes.
+- **Public homepage:** visitors land on the library, with a banner from the latest watched film,
+  "Recently watched" and "Highest rated" shelves, and filters for the full grid.
+- **Title pages:** full release date, IMDb rating, Rotten Tomatoes critics' score, worldwide box
+  office, cast with headshots (main characters and voice actors for anime) and a trailer link.
 - **CSV import with match review:** upload a list (the Letterboxd `Title,Year` format works as is).
   Each row is matched automatically when there is exactly one sensible candidate; remakes,
   typos and ambiguous titles wait in a review queue where you pick, search again or skip.
-- **Search and add** from TMDB or AniList.
-- **Public profile** with filters (type, live-action vs animated, status, title) and a
-  **stats page**: hours watched, release decades, rating distribution, top genres, directors
-  and anime studios.
-- **Data quality checks** (`python manage.py check_data`) and a test suite, both run in CI.
+- **Duplicate detection:** the same work from two sources (e.g. a Ghibli film in TMDB and AniList)
+  is caught by shared IMDb/MyAnimeList ids or by name and year; adding a likely twin asks first,
+  and a review page merges existing pairs while keeping ratings, dates and notes.
+- **Stats:** hours watched, release decades, critics vs audience score distribution, top genres,
+  directors and anime studios. Every chart has a table view.
+- **Nightly refresh:** a scheduled GitHub Actions job calls a token-protected endpoint in small
+  batches to fill missing details and scores, staying inside the OMDb free tier's daily limit.
+- **Quality checks:** 60 tests with all APIs mocked, data-quality checks, linting, all in CI on Postgres.
 
 ## Architecture
 
@@ -63,7 +72,7 @@ Without `DATABASE_URL` the app uses a local SQLite file.
 ## Tests and checks
 
 ```bash
-pytest                       # 35 tests, all API calls mocked
+pytest                       # 60 tests, all API calls mocked
 ruff check . && ruff format --check .
 python manage.py check_data  # data quality checks
 ```
@@ -75,12 +84,15 @@ CI runs all of these against Postgres 16 on every push.
 1. Create a Postgres database on [Neon](https://neon.tech) and copy its connection string.
 2. On [Render](https://render.com), choose **New → Blueprint** and select this repository.
    `render.yaml` defines the service.
-3. Fill in the environment variables Render asks for: `DATABASE_URL`, `TMDB_TOKEN`,
-   `DJANGO_ADMIN_USERNAME` and `DJANGO_ADMIN_PASSWORD`. The build creates that account.
-4. After the first deploy, open `/import/` and upload your lists.
+3. Fill in the environment variables Render asks for: `DATABASE_URL`, `TMDB_TOKEN`, `OMDB_API_KEY`,
+   `REFRESH_TOKEN`, `DJANGO_ADMIN_USERNAME` and `DJANGO_ADMIN_PASSWORD`. The build creates that account.
+4. In the GitHub repository, add the secrets `SITE_URL` (the Render URL, no trailing slash) and
+   `REFRESH_TOKEN` (the same value as on Render) so the nightly refresh can run.
+5. After the first deploy, open `/import/` and upload your lists.
 
-On Render's free plan the service sleeps after a period of inactivity, so the first visit can
-take up to a minute.
+On Render's free plan the service sleeps after 15 idle minutes, so the first visit can take up to
+a minute. A free uptime monitor requesting `/healthz` every 14 minutes keeps it awake; one service
+running all month fits inside the free plan's 750 instance hours.
 
 ## Useful commands
 

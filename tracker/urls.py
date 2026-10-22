@@ -17,4 +17,7 @@ urlpatterns = [
     path("u/<str:username>/", views.profile, name="profile"),
     path("u/<str:username>/stats/", views.stats, name="stats"),
     path("account/password/", views.change_password, name="change_password"),
+    path("duplicates/", views.duplicates, name="duplicates"),
+    path("duplicates/merge/", views.merge_duplicate, name="merge_duplicate"),
+    path("tasks/refresh/", views.refresh_batch, name="refresh_batch"),
 ]

@@ -1,8 +1,8 @@
 {% extends "tracker/base.html" %}
 {% load humanize tracker_extras %}
 {% block content %}
-<section class="hero">
-  <div>
+<section class="banner{% if banner %} has-image{% endif %}"{% if banner %} style="--banner: url('{{ banner.title.backdrop_url }}')"{% endif %}>
+  <div class="banner-copy">
     <h1>{{ owner_name }}</h1>
     <p class="lede">
       {% if watched_count %}
@@ -12,21 +12,36 @@
       {% endif %}
     </p>
     <div class="hero-actions">
-      <a class="button secondary" href="{% url 'stats' owner.username %}">See the stats</a>
+      <a class="button light" href="{% url 'stats' owner.username %}">See the stats</a>
       {% if editable %}<a class="button" href="{% url 'search' %}">Add a title</a>{% endif %}
     </div>
   </div>
-  {% if recent %}
-    <div class="curtain-call" aria-label="Recently watched">
-      {% for e in recent %}
-        <a href="{% url 'title' e.title.pk %}" style="{{ forloop.counter0|tilt }}" title="{{ e.title }}">
-          <img src="{{ e.title.poster_url }}" alt="{{ e.title.name }}" loading="eager" width="108" height="162">
-        </a>
-      {% endfor %}
-    </div>
+  {% if banner %}
+    <a class="banner-credit" href="{% url 'title' banner.title.pk %}">Latest: {{ banner.title.name }}</a>
   {% endif %}
 </section>
 
-{% include "tracker/_filters.html" %}
-{% include "tracker/_grid.html" %}
+{% if recent %}
+<section class="shelf" aria-labelledby="shelf-recent">
+  <h2 id="shelf-recent">Recently watched</h2>
+  <div class="shelf-row">
+    {% for e in recent %}{% include "tracker/_shelf_item.html" %}{% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if top_rated %}
+<section class="shelf" aria-labelledby="shelf-top">
+  <h2 id="shelf-top">Highest rated</h2>
+  <div class="shelf-row">
+    {% for e in top_rated %}{% include "tracker/_shelf_item.html" %}{% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<section aria-labelledby="all-h">
+  <h2 id="all-h" class="section-title">The whole library</h2>
+  {% include "tracker/_filters.html" %}
+  {% include "tracker/_grid.html" %}
+</section>
 {% endblock %}

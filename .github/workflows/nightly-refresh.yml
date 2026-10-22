@@ -1,0 +1,57 @@
+name: Nightly refresh
+
+# Fills in missing details (cast, trailers, release dates, IMDb ids) and IMDb / Rotten Tomatoes
+# scores by calling the site's protected refresh endpoint in small batches.
+on:
+  schedule:
+    - cron: "17 2 * * *"   # 02:17 UTC every night
+  workflow_dispatch:         # "Run workflow" button for an immediate backfill
+    inputs:
+      omdb_budget:
+        description: "Maximum OMDb lookups this run (the free key allows 1,000 a day)"
+        default: "900"
+
+concurrency:
+  group: nightly-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      SITE_URL: ${{ secrets.SITE_URL }}
+      REFRESH_TOKEN: ${{ secrets.REFRESH_TOKEN }}
+      OMDB_BUDGET: ${{ github.event.inputs.omdb_budget || '900' }}
+    steps:
+      - name: Check configuration
+        run: |
+          if [ -z "$SITE_URL" ] || [ -z "$REFRESH_TOKEN" ]; then
+            echo "Set the SITE_URL and REFRESH_TOKEN repository secrets first."; exit 1
+          fi
+
+      - name: Wake the site
+        # The free plan sleeps when idle; the first request can take up to a minute.
+        run: curl --silent --show-error --fail --retry 6 --retry-delay 15 --retry-all-errors --max-time 90 "$SITE_URL/healthz"
+
+      - name: Refresh in batches
+        run: |
+          budget=$OMDB_BUDGET
+          for i in $(seq 1 150); do
+            out=$(curl --silent --show-error --fail --max-time 90 \
+              -H "X-Refresh-Token: $REFRESH_TOKEN" \
+              --data "omdb_budget=$budget" \
+              "$SITE_URL/tasks/refresh/")
+            echo "batch $i: $out"
+            scores_done=$(echo "$out" | jq '.scores_done')
+            budget=$(( budget - scores_done ))
+            details_left=$(echo "$out" | jq '.details_left')
+            scores_left=$(echo "$out" | jq '.scores_left')
+            stopped=$(echo "$out" | jq -r '.stopped')
+            if [ "$details_left" -eq 0 ] && { [ "$scores_left" -eq 0 ] || [ "$budget" -le 0 ]; }; then
+              echo "Done for today."; break
+            fi
+            if [ -n "$stopped" ] && [ "$stopped" != "time" ]; then
+              echo "Stopped: $stopped"; break
+            fi
+          done

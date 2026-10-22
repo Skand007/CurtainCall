@@ -1,0 +1,32 @@
+{% extends "tracker/base.html" %}
+{% block title %}Possible duplicates · CurtainCall{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <h1>Possible duplicates</h1>
+  <a href="{% url 'import_list' %}">Back to imports</a>
+</div>
+{% if pairs %}
+  <p class="muted" style="max-width:65ch">These look like the same work added from two sources. Pick the version to keep: your rating, status, dates and notes from both are combined into it, and the other copy is removed.</p>
+  {% for pair in pairs %}
+    <section class="card dup-pair">
+      {% for t in pair %}
+        <div class="dup-side">
+          {% if t.poster_url %}<img src="{{ t.poster_url }}" alt="" width="64" height="96">{% else %}<span class="noposter small"></span>{% endif %}
+          <div>
+            <a href="{% url 'title' t.pk %}"><strong>{{ t.name }}</strong></a>
+            <p class="muted small">{{ t.year|default:"No year" }}, {{ t.get_kind_display|lower }} from {{ t.get_source_display }}</p>
+            <form method="post" action="{% url 'merge_duplicate' %}">
+              {% csrf_token %}
+              <input type="hidden" name="keep" value="{{ t.pk }}">
+              <input type="hidden" name="drop" value="{% if forloop.first %}{{ pair.1.pk }}{% else %}{{ pair.0.pk }}{% endif %}">
+              <button class="button secondary">Keep this one</button>
+            </form>
+          </div>
+        </div>
+      {% endfor %}
+    </section>
+  {% endfor %}
+{% else %}
+  <p class="empty">No duplicates found. Titles added later are checked as you add them.</p>
+{% endif %}
+{% endblock %}

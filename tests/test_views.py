@@ -237,3 +237,53 @@ def test_delete_entry_marks_import_row_skipped(client_in, user, fake_sources):
     client_in.post(reverse("delete_entry", args=[entry.pk]))
     assert not Entry.objects.exists()
     assert batch.rows.get().state == ImportRow.SKIPPED
+
+
+def test_title_page_shows_scores_box_office_trailer_cast_and_release_date(client, owner):
+    import datetime
+
+    heat = Title.objects.create(
+        source="tmdb",
+        source_id="949",
+        kind="movie",
+        name="Heat",
+        year=1995,
+        external_score=7.9,
+        release_date=datetime.date(1995, 12, 15),
+        imdb_id="tt0113277",
+        imdb_rating=8.3,
+        imdb_votes=712345,
+        rt_critics=88,
+        box_office_usd=187436818,
+        trailer_key="abc123",
+        runtime_minutes=170,
+        cast=[{"name": "Al Pacino", "character": "Vincent Hanna", "photo": ""}],
+    )
+    Entry.objects.create(user=owner, title=heat)
+    page = client.get(reverse("title", args=[heat.pk])).content.decode()
+    assert "15 December 1995" in page
+    assert "8.3" in page and "IMDb" in page and "88%" in page
+    assert "TMDB score" not in page
+    assert "$187.4 million worldwide" in page
+    assert "youtube.com/watch?v=abc123" in page
+    assert "Al Pacino" in page and "Vincent Hanna" in page
+    assert "2 h 50 min" in page
+
+
+def test_library_cards_stay_simple(client, owner):
+    heat = Title.objects.create(
+        source="tmdb",
+        source_id="949",
+        kind="movie",
+        name="Heat",
+        year=1995,
+        imdb_rating=8.3,
+        box_office_usd=187436818,
+        poster_url="https://img/p.jpg",
+        backdrop_url="https://img/b.jpg",
+    )
+    Entry.objects.create(user=owner, title=heat, rating=4.5)
+    page = client.get(reverse("home")).content.decode()
+    assert "Recently watched" in page and "Highest rated" in page
+    assert "https://img/b.jpg" in page  # banner
+    assert "$187.4 million" not in page and "8.3" not in page

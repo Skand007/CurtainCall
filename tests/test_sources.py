@@ -99,7 +99,7 @@ def test_upsert_is_idempotent_and_updates():
     assert first.pk == second.pk
     assert Title.objects.count() == 1
     assert Title.objects.get().name == "AKIRA"
-    assert second.details_fetched is True  # AniList search already carries details
+    assert second.details_fetched is False  # search results lack the cast, so the full lookup is still due
 
 
 @pytest.mark.django_db

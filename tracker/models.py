@@ -31,6 +31,24 @@ class Title(models.Model):
         null=True, blank=True
     )  # TMDB vote avg (0-10) / AniList mean (0-100 scaled to 0-10)
     details_fetched = models.BooleanField(default=False)
+
+    # Richer details, filled by the add flow and the nightly refresh.
+    release_date = models.DateField(null=True, blank=True)
+    backdrop_url = models.URLField(blank=True)  # wide image for banners
+    cast = models.JSONField(default=list, blank=True)  # [{"name", "character", "photo"}], top billed first
+    trailer_key = models.CharField(max_length=40, blank=True)  # YouTube video id
+    box_office_usd = models.BigIntegerField(null=True, blank=True)  # worldwide gross from TMDB, films only
+
+    # Cross-reference ids, used to spot the same title from different sources.
+    imdb_id = models.CharField(max_length=15, blank=True, db_index=True)
+    mal_id = models.CharField(max_length=15, blank=True, db_index=True)
+
+    # Scores from OMDb (IMDb users, Rotten Tomatoes critics).
+    imdb_rating = models.FloatField(null=True, blank=True)  # 0-10
+    imdb_votes = models.PositiveIntegerField(null=True, blank=True)
+    rt_critics = models.PositiveSmallIntegerField(null=True, blank=True)  # Tomatometer, 0-100
+    scores_checked_at = models.DateTimeField(null=True, blank=True)  # last OMDb lookup, even if it found nothing
+
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -47,6 +65,14 @@ class Title(models.Model):
         if self.source == self.SOURCE_ANILIST:
             return f"https://anilist.co/anime/{self.source_id}"
         return f"https://www.themoviedb.org/{self.kind}/{self.source_id}"
+
+    @property
+    def imdb_url(self):
+        return f"https://www.imdb.com/title/{self.imdb_id}/" if self.imdb_id else ""
+
+    @property
+    def trailer_url(self):
+        return f"https://www.youtube.com/watch?v={self.trailer_key}" if self.trailer_key else ""
 
 
 class Entry(models.Model):

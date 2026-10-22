@@ -12,6 +12,7 @@
   --hairline: rgba(0, 0, 0, 0.09);
   --curtain: #b4233c;
   --curtain-ink: #ffffff;
+  --audience: #2f6fde;     /* second chart series; validated against --curtain for colour-blind separation */
   --gold: #b7791f;
   --ok: #248a3d;
   --shadow-poster: 0 1px 2px rgba(0, 0, 0, 0.08), 0 8px 20px -10px rgba(0, 0, 0, 0.35);
@@ -35,6 +36,7 @@
     --hairline: rgba(255, 255, 255, 0.09);
     --curtain: #f2546b;
     --curtain-ink: #1c1b20;
+    --audience: #4a8ef0;
     --gold: #f2c14e;
     --ok: #4cd07d;
     --shadow-poster: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 24px -10px rgba(0, 0, 0, 0.7);
@@ -247,32 +249,71 @@ fieldset label input { width: auto; min-height: 0; margin: 0; }
 .hero .lede strong { color: var(--ink); font-weight: 600; }
 .hero-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
 
-/* The curtain call: the latest posters take a bow, fanned like a line of actors. */
-.curtain-call {
+/* ------------------------------------------------------------ banner (library homepage) */
+
+/* The latest watched film's wide image sits behind your name, Apple TV style.
+   A dark scrim at the bottom keeps the white type readable on any picture. */
+.banner {
+  position: relative;
+  isolation: isolate;
   display: flex;
   align-items: flex-end;
-  padding: 1rem 1.5rem 1.5rem;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 300px;
+  margin: 0.5rem 0 2.5rem;
+  padding: 2rem;
+  border-radius: 20px;
+  overflow: hidden;
+  background: var(--surface);
+  box-shadow: var(--shadow-panel);
 }
-.curtain-call a {
-  display: block;
-  width: 108px;
-  margin-left: -34px;
-  transform: rotate(var(--tilt)) translateY(var(--lift));
-  transform-origin: 50% 100%;
-  transition: transform 220ms var(--press);
+.banner.has-image {
+  min-height: clamp(320px, 42vw, 460px);
+  color: #fff;
+  background: #1c1b20 var(--banner) center 30% / cover no-repeat;
 }
-.curtain-call a:first-child { margin-left: 0; }
-.curtain-call a:hover { transform: rotate(0deg) translateY(-10px); z-index: 2; }
-.curtain-call a:active { transform: rotate(0deg) translateY(-6px) scale(0.97); }
-.curtain-call img {
-  width: 100%;
-  aspect-ratio: 2 / 3;
-  object-fit: cover;
-  border-radius: var(--r-poster);
-  box-shadow: var(--shadow-poster);
-  display: block;
-  background: var(--fill);
+.banner.has-image::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.78) 0%, rgba(0, 0, 0, 0.35) 45%, rgba(0, 0, 0, 0) 75%),
+              linear-gradient(to right, rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0) 60%);
 }
+.banner h1 { font-size: clamp(2.5rem, 6vw, 4.25rem); }
+.banner .lede { font-size: 1.25rem; line-height: 1.38; letter-spacing: -0.016em; max-width: 36ch; margin: 0.6rem 0 1.25rem; color: var(--ink-2); }
+.banner.has-image .lede { color: rgba(255, 255, 255, 0.82); }
+.banner .lede strong { color: inherit; font-weight: 650; }
+.banner.has-image .lede strong { color: #fff; }
+.banner-credit { color: rgba(255, 255, 255, 0.75); font-size: 0.8125rem; font-weight: 500; white-space: nowrap; align-self: flex-end; }
+.banner-credit:hover { color: #fff; }
+/* A light glass button for use on top of imagery. */
+.button.light { background: rgba(255, 255, 255, 0.22); color: #fff; -webkit-backdrop-filter: blur(16px) saturate(160%); backdrop-filter: blur(16px) saturate(160%); }
+.banner:not(.has-image) .button.light { background: var(--fill); color: var(--ink); }
+
+/* ------------------------------------------------------------ shelves */
+
+.shelf { margin-bottom: 2.25rem; }
+.shelf h2, .section-title { margin-bottom: 0.9rem; }
+.section-title { margin-top: 0.5rem; }
+.shelf-row {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 148px;
+  gap: 1.1rem;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: 1rem;
+  padding: 0.25rem 1rem 1rem;
+  margin: 0 -1rem;
+  list-style: none;
+  scrollbar-width: thin;
+}
+.shelf-row > * { scroll-snap-align: start; }
+/* Fade the right edge to hint that the row scrolls. */
+.shelf-row { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 48px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 48px), transparent); }
 
 /* ------------------------------------------------------------ filters */
 
@@ -335,11 +376,13 @@ fieldset label input { width: auto; min-height: 0; margin: 0; }
   margin: -1.5rem -1rem 0;
   padding: 3rem 1rem 2rem;
 }
-/* The poster, blurred into a backdrop that fades into the page. */
+/* The poster, blurred into a backdrop that fades into the page. Fixed to the viewport, so it
+   reaches the screen edges without ever making the page scroll sideways. */
 .feature::before {
   content: "";
-  position: absolute;
-  inset: 0 0 -6rem;
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: 85vh;
   z-index: -1;
   background-image: var(--backdrop);
   background-size: cover;
@@ -381,6 +424,35 @@ fieldset label input { width: auto; min-height: 0; margin: 0; }
 .take-actions { display: flex; gap: 1rem; align-items: center; margin-top: 0.25rem; }
 .saved { color: var(--ok); font-size: 0.875rem; font-weight: 500; }
 .added { color: var(--ok); font-weight: 500; font-size: 0.9375rem; }
+
+/* Scores: IMDb and Rotten Tomatoes side by side. */
+.scores { display: flex; flex-wrap: wrap; gap: 0.75rem; list-style: none; padding: 0; margin: 0 0 1.1rem; }
+.scores li { display: flex; align-items: center; gap: 0.6rem; background: var(--fill); border-radius: 12px; padding: 0.5rem 0.9rem 0.5rem 0.75rem; }
+.score-value { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.score-label { font-size: 0.8125rem; font-weight: 600; line-height: 1.25; }
+.title-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; margin: 0.25rem 0 0.5rem; }
+
+/* Cast: round headshots in a scrolling row. */
+.cast { margin-top: 2.5rem; }
+.cast .shelf-row { grid-auto-columns: 112px; }
+.person { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 0.15rem; }
+.person img, .person-blank {
+  width: 96px; height: 96px; border-radius: 50%; object-fit: cover;
+  background: var(--fill); box-shadow: var(--shadow-poster); margin-bottom: 0.4rem;
+}
+.person-blank { display: flex; align-items: center; justify-content: center; font-size: 1.75rem; font-weight: 600; color: var(--ink-2); }
+.person-name { font-size: 0.875rem; font-weight: 600; line-height: 1.25; }
+.person-role { font-size: 0.8125rem; color: var(--ink-2); line-height: 1.25; }
+
+/* ------------------------------------------------------------ duplicates */
+
+.dup-prompt { background: var(--surface); border-radius: 12px; box-shadow: var(--shadow-panel); padding: 0.8rem 1rem; max-width: 420px; }
+.dup-prompt p { font-size: 0.9375rem; margin-bottom: 0.6rem; }
+.dup-prompt form { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.dup-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+.dup-side { display: flex; gap: 0.9rem; align-items: flex-start; }
+.dup-side img { width: 64px; border-radius: 6px; box-shadow: var(--shadow-poster); }
+.dup-side p { margin: 0.15rem 0 0.6rem; }
 
 /* ------------------------------------------------------------ search */
 
@@ -425,6 +497,12 @@ fieldset label input { width: auto; min-height: 0; margin: 0; }
 .card > h2 { margin-bottom: 0.9rem; }
 .chart-box { position: relative; height: 240px; }
 details.as-table { margin-top: 0.75rem; font-size: 0.875rem; }
+.chart-note { margin: -0.4rem 0 0.6rem; max-width: 60ch; }
+.legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.25rem; list-style: none; padding: 0; margin: 0 0 0.75rem; font-size: 0.8125rem; color: var(--ink-2); }
+.legend li { display: flex; align-items: center; gap: 0.45rem; }
+.swatch { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.swatch.critics { background: var(--curtain); }
+.swatch.audience { background: var(--audience); }
 details.as-table summary { cursor: pointer; color: var(--ink-2); }
 details.as-table table { margin-top: 0.5rem; border-collapse: collapse; }
 details.as-table td, details.as-table th { padding: 0.2rem 1rem 0.2rem 0; text-align: left; font-weight: 400; }
@@ -436,10 +514,12 @@ details.as-table td, details.as-table th { padding: 0.2rem 1rem 0.2rem 0; text-a
 /* ------------------------------------------------------------ small screens */
 
 @media (max-width: 760px) {
+  .banner { padding: 1.25rem; border-radius: 16px; flex-direction: column; align-items: flex-start; justify-content: flex-end; margin-top: 0; }
+  .banner.has-image { min-height: 360px; }
+  .banner .lede { font-size: 1.0625rem; }
+  .shelf-row { grid-auto-columns: 112px; gap: 0.8rem; }
+  .dup-pair { grid-template-columns: 1fr; }
   .hero { grid-template-columns: 1fr; padding-top: 1.5rem; gap: 1rem; }
-  .curtain-call { order: -1; padding: 0.75rem 0 1.75rem 0.75rem; }
-  .curtain-call a { width: 74px; margin-left: -24px; }
-  .curtain-call a:nth-child(n+5) { display: none; }
   .filters input[type=search] { max-width: none; margin-left: 0; flex-basis: 100%; }
   .segmented { width: 100%; }
   .segmented label { flex: 1; text-align: center; }
@@ -460,11 +540,11 @@ details.as-table td, details.as-table th { padding: 0.2rem 1rem 0.2rem 0; text-a
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: 0.01ms !important; }
-  .button:active, .poster:active .art, .curtain-call a:active { transform: none; }
-  .curtain-call a:hover { transform: rotate(var(--tilt)) translateY(var(--lift)); }
+  .button:active, .poster:active .art { transform: none; }
 }
 
 @media (prefers-reduced-transparency: reduce) {
+  .button.light { background: rgba(0, 0, 0, 0.55); -webkit-backdrop-filter: none; backdrop-filter: none; }
   .topbar { background: var(--canvas); -webkit-backdrop-filter: none; backdrop-filter: none; }
   .take { background: var(--surface); -webkit-backdrop-filter: none; backdrop-filter: none; }
   .feature::before { display: none; }

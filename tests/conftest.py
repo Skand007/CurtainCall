@@ -104,5 +104,6 @@ def fake_sources(monkeypatch):
     monkeypatch.setattr(sources, "search_tmdb", search_tmdb)
     monkeypatch.setattr(sources, "search_anilist", search_anilist)
     monkeypatch.setattr(sources, "get_candidate", get_candidate)
+    monkeypatch.setattr(sources, "get_anilist", lambda source_id: get_candidate("anilist", "anime", source_id))
     monkeypatch.setattr(sources, "fetch_tmdb_details", fetch_tmdb_details)
     return calls

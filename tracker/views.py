@@ -1,6 +1,8 @@
 import csv
+import hmac
 import io
 import logging
+import time
 
 from django.conf import settings
 from django.contrib import messages
@@ -9,12 +11,14 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import PasswordChangeForm
 from django.core.paginator import Paginator
 from django.db.models import Count, F, Q, Sum
-from django.http import HttpResponse, HttpResponseBadRequest
+from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
-from . import matching, sources
+from . import dedup, matching, sources
 from .models import Entry, ImportBatch, ImportRow, Title
 from .stats import library_stats
 
@@ -98,12 +102,25 @@ def library_page(request, owner):
         "editable": request.user == owner,
         "watched_count": watched.count(),
         "hours": round(minutes / 60),
-        "recent": watched.exclude(title__poster_url="")
-        .select_related("title")
-        .order_by(F("watched_on").desc(nulls_last=True), "-updated_at")[:6],
     }
-    template = "tracker/_grid.html" if is_htmx(request) else "tracker/library.html"
-    return render(request, template, context)
+    if is_htmx(request):
+        return render(request, "tracker/_grid.html", context)
+
+    with_poster = watched.exclude(title__poster_url="").select_related("title")
+    recent = list(with_poster.order_by(F("watched_on").desc(nulls_last=True), "-created_at")[:14])
+    # The banner uses the latest watched title that has a wide image.
+    banner = (
+        watched.exclude(title__backdrop_url="")
+        .select_related("title")
+        .order_by(F("watched_on").desc(nulls_last=True), "-created_at")
+        .first()
+    )
+    context.update(
+        banner=banner,
+        recent=recent,
+        top_rated=list(with_poster.filter(rating__gte=4).order_by("-rating", "-watched_on", "title__name")[:14]),
+    )
+    return render(request, "tracker/library.html", context)
 
 
 def home(request):
@@ -133,7 +150,7 @@ def stats(request, username):
         "owner_name": display_name(owner),
         "stats": data,
         "decade_rows": list(zip(data["decades"]["labels"], data["decades"]["values"])),
-        "rating_rows": list(zip(data["ratings"]["labels"], data["ratings"]["values"])),
+        "score_rows": list(zip(data["scores"]["labels"], data["scores"]["critics"], data["scores"]["audience"])),
     }
     return render(request, "tracker/stats.html", context)
 
@@ -212,17 +229,47 @@ def add_title(request):
         return HttpResponseBadRequest("bad title reference")
     if status not in dict(Entry.STATUS_CHOICES):
         status = Entry.STATUS_WATCHED
+    use_title = request.POST.get("use_title", "")
     try:
-        title = Title.objects.filter(source=source, source_id=source_id).first()
-        if title is None:
-            title = sources.upsert_title(sources.get_candidate(source, kind, source_id))
-        sources.ensure_details(title)
+        if use_title.isdigit():
+            # The person confirmed it is the same work as a title already in the library.
+            title = get_object_or_404(Title, pk=int(use_title), entries__user=request.user)
+        else:
+            title = Title.objects.filter(source=source, source_id=source_id).first()
+            if title is None:
+                candidate = sources.get_candidate(source, kind, source_id)
+                twin = None if request.POST.get("confirm") else dedup.duplicate_in_library(request.user, candidate)
+                if twin is not None:
+                    context = {"twin": twin, "source": source, "kind": kind, "source_id": source_id, "status": status}
+                    return render(request, "tracker/_duplicate_prompt.html", context)
+                title = sources.upsert_title(candidate)
+            title = sources.ensure_details(title)
     except (sources.SourceError, OSError) as exc:
         log.warning("add failed: %s", exc)
-        return HttpResponse('<span class="muted">Could not reach the service, try again</span>')
+        return HttpResponse('<span class="muted">Could not reach the service. Try again in a moment.</span>')
+    fetch_scores_quietly(title)
     add_to_library(request.user, title, status)
     label = dict(Entry.STATUS_CHOICES)[status]
     return HttpResponse(f'<a class="added" href="/title/{title.pk}/">Added to {label}</a>')
+
+
+def fetch_scores_quietly(title):
+    """IMDb and Rotten Tomatoes scores are a bonus: never let them block adding a title."""
+    if settings.OMDB_API_KEY and title.imdb_id and title.scores_checked_at is None:
+        try:
+            sources.fetch_omdb_scores(title)
+        except (sources.SourceError, OSError, ValueError) as exc:
+            log.info("score lookup skipped for %s: %s", title, exc)
+
+
+def settle_match(row, user, include_anilist=True):
+    """After a row matches: fetch details, fold into an existing twin, add to the library."""
+    title = sources.ensure_details(row.matched_title, include_anilist=include_anilist)
+    title = dedup.fold_import_duplicate(title, user)
+    if row.matched_title_id != title.pk:
+        row.matched_title = title
+        row.save()
+    add_to_library(user, title)
 
 
 @login_required
@@ -354,8 +401,8 @@ def import_process(request, pk):
         try:
             matching.match_row(row, batch.hint)
             if row.state == ImportRow.MATCHED:
-                sources.ensure_details(row.matched_title)
-                add_to_library(request.user, row.matched_title)
+                # AniList details wait for the nightly refresh, to stay under its rate limit.
+                settle_match(row, request.user, include_anilist=False)
         except (sources.SourceError, OSError) as exc:
             log.warning("import row %s failed: %s", row.pk, exc)
             error = str(exc)
@@ -381,10 +428,9 @@ def import_resolve(request, row_pk):
             if not 0 <= index < len(row.candidates):
                 return HttpResponseBadRequest("pick a candidate")
             title = sources.upsert_title(row.candidates[index])
-            sources.ensure_details(title)
             row.matched_title, row.state, row.candidates = title, ImportRow.MATCHED, []
             row.save()
-            add_to_library(request.user, title)
+            settle_match(row, request.user)
         elif action == "retry":
             row.raw_title = request.POST.get("title", row.raw_title).strip()[:300] or row.raw_title
             year = request.POST.get("year", "").strip()
@@ -392,8 +438,7 @@ def import_resolve(request, row_pk):
             hint = matching.HINT_ANIMATED if request.POST.get("kind") == "anime" else matching.HINT_MOVIE
             matching.match_row(row, hint)
             if row.state == ImportRow.MATCHED:
-                sources.ensure_details(row.matched_title)
-                add_to_library(request.user, row.matched_title)
+                settle_match(row, request.user)
         else:
             return HttpResponseBadRequest("unknown action")
     except (sources.SourceError, OSError, ValueError) as exc:
@@ -401,3 +446,88 @@ def import_resolve(request, row_pk):
         return HttpResponse('<div class="card muted">Could not reach the service, try again.</div>')
     kinds = [(Title.KIND_MOVIE, "Film"), (Title.KIND_TV, "Series"), ("anime", "Anime")]
     return render(request, "tracker/_review_row.html", {"row": row, "kinds": kinds})
+
+
+# ---------------------------------------------------------------- duplicates
+
+
+@login_required
+def duplicates(request):
+    return render(request, "tracker/duplicates.html", {"pairs": dedup.likely_pairs(request.user)})
+
+
+@login_required
+@require_POST
+def merge_duplicate(request):
+    library = Title.objects.filter(entries__user=request.user).distinct()
+    keep = get_object_or_404(library, pk=request.POST.get("keep", "0"))
+    drop = get_object_or_404(library, pk=request.POST.get("drop", "0"))
+    dedup.merge_titles(keep, drop)
+    messages.success(request, f"Merged into {keep}.")
+    return redirect("duplicates")
+
+
+# ---------------------------------------------------------------- nightly refresh
+
+REFRESH_SECONDS = 20  # stay well inside the web server's 60-second request timeout
+
+
+@csrf_exempt
+@require_POST
+def refresh_batch(request):
+    """Fill in missing details and scores for a few titles. Called repeatedly by GitHub Actions.
+
+    Protected by a shared token. Returns how much work is left so the caller knows when to stop.
+    """
+    token = request.headers.get("X-Refresh-Token", "")
+    if not settings.REFRESH_TOKEN or not hmac.compare_digest(token, settings.REFRESH_TOKEN):
+        return JsonResponse({"error": "not allowed"}, status=403)
+    try:
+        omdb_budget = max(0, int(request.POST.get("omdb_budget", "0")))
+    except ValueError:
+        omdb_budget = 0
+
+    started = time.monotonic()
+    details_done = scores_done = 0
+    stopped = ""
+    needs_details = Title.objects.filter(details_fetched=False).order_by("id")
+    for title in needs_details[:200]:
+        if time.monotonic() - started > REFRESH_SECONDS:
+            stopped = "time"
+            break
+        try:
+            sources.ensure_details(title)
+            details_done += 1
+        except sources.RateLimited as exc:
+            stopped = str(exc)
+            break
+        except (sources.SourceError, OSError, ValueError) as exc:
+            log.warning("refresh details failed for %s: %s", title.pk, exc)
+            Title.objects.filter(pk=title.pk).update(details_fetched=True)  # do not retry forever
+        sources.pause_for(title)
+
+    needs_scores = Title.objects.exclude(imdb_id="").filter(scores_checked_at__isnull=True).order_by("id")
+    if not stopped and settings.OMDB_API_KEY:
+        for title in needs_scores[:omdb_budget]:
+            if time.monotonic() - started > REFRESH_SECONDS:
+                stopped = "time"
+                break
+            try:
+                sources.fetch_omdb_scores(title)
+                scores_done += 1
+            except sources.RateLimited as exc:
+                stopped = str(exc)
+                break
+            except (sources.SourceError, OSError, ValueError) as exc:
+                log.warning("refresh scores failed for %s: %s", title.pk, exc)
+                Title.objects.filter(pk=title.pk).update(scores_checked_at=timezone.now())
+
+    return JsonResponse(
+        {
+            "details_done": details_done,
+            "scores_done": scores_done,
+            "details_left": needs_details.count(),
+            "scores_left": needs_scores.count() if settings.OMDB_API_KEY else 0,
+            "stopped": stopped,
+        }
+    )

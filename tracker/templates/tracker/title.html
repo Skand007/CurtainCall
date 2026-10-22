@@ -2,7 +2,7 @@
 {% load tracker_extras %}
 {% block title %}{{ title }} · CurtainCall{% endblock %}
 {% block content %}
-<article class="feature"{% if title.poster_url %} style="--backdrop: url('{{ title.poster_url }}')"{% endif %}>
+<article class="feature"{% if title.backdrop_url or title.poster_url %} style="--backdrop: url('{% firstof title.backdrop_url title.poster_url %}')"{% endif %}>
   <div class="detail">
     <div class="detail-poster">
       {% if title.poster_url %}<img src="{{ title.poster_url }}" alt="Poster for {{ title.name }}" width="280" height="420">{% else %}<span class="noposter">{{ title.name }}</span>{% endif %}
@@ -13,25 +13,54 @@
       {% if title.original_name and title.original_name != title.name %}<p class="original">{{ title.original_name }}</p>{% endif %}
 
       <p class="facts-line">
-        {% if title.year %}<span>{{ title.year }}</span>{% endif %}
+        {% if title.release_date %}<span><time datetime="{{ title.release_date|date:'Y-m-d' }}">{{ title.release_date|date:"j F Y" }}</time></span>{% elif title.year %}<span>{{ title.year }}</span>{% endif %}
         <span>{{ title.get_kind_display }}</span>
-        {% if title.runtime_minutes %}<span>{{ title.runtime_minutes }} min{% if title.episodes and title.episodes > 1 %} over {{ title.episodes }} episodes{% endif %}</span>{% endif %}
-        {% if title.external_score %}<span>{{ title.get_source_display }} score {{ title.external_score|floatformat:1 }}/10</span>{% endif %}
+        {% if title.runtime_minutes %}<span>{% if title.kind == "movie" %}{{ title.runtime_minutes|hours_minutes }}{% else %}{{ title.runtime_minutes|hours_minutes }} in total{% if title.episodes and title.episodes > 1 %}, {{ title.episodes }} episodes{% endif %}{% endif %}</span>{% endif %}
       </p>
+
+      {% if title.imdb_rating or title.rt_critics is not None or title.source == "anilist" and title.external_score %}
+        <ul class="scores" aria-label="Scores">
+          {% if title.imdb_rating %}
+            <li><span class="score-value">{{ title.imdb_rating|floatformat:1 }}</span><span class="score-label">IMDb{% if title.imdb_votes %}<br><span class="muted">{{ title.imdb_votes|short_count }} votes</span>{% endif %}</span></li>
+          {% endif %}
+          {% if title.rt_critics is not None %}
+            <li><span class="score-value">{{ title.rt_critics }}%</span><span class="score-label">Rotten Tomatoes<br><span class="muted">critics</span></span></li>
+          {% endif %}
+          {% if not title.imdb_rating and title.source == "anilist" and title.external_score %}
+            <li><span class="score-value">{{ title.external_score|floatformat:1 }}</span><span class="score-label">AniList<br><span class="muted">users</span></span></li>
+          {% endif %}
+        </ul>
+      {% endif %}
 
       {% if title.genres %}
         <ul class="chips" aria-label="Genres">{% for g in title.genres %}<li>{{ g }}</li>{% endfor %}</ul>
       {% endif %}
 
-      {% if title.directors %}
+      {% if title.directors or title.box_office_usd %}
         <dl class="facts">
-          <dt>{% if title.kind == "movie" %}Directed by{% elif title.kind == "anime" %}Studio{% else %}Created by{% endif %}</dt>
-          <dd>{{ title.directors|join:", " }}</dd>
+          {% if title.directors %}
+            <dt>{% if title.kind == "movie" %}Directed by{% elif title.kind == "anime" %}Studio{% else %}Created by{% endif %}</dt>
+            <dd>{{ title.directors|join:", " }}</dd>
+          {% endif %}
+          {% if title.box_office_usd %}
+            <dt>Box office</dt>
+            <dd>{{ title.box_office_usd|money }} worldwide</dd>
+          {% endif %}
         </dl>
       {% endif %}
 
       {% if title.overview %}<p class="overview">{{ title.overview|striptags|linebreaksbr }}</p>{% endif %}
-      <p class="small"><a href="{{ title.source_url }}" target="_blank" rel="noopener">View on {{ title.get_source_display }}</a></p>
+
+      <div class="title-actions">
+        {% if title.trailer_url %}
+          <a class="button" href="{{ title.trailer_url }}" target="_blank" rel="noopener">
+            <svg aria-hidden="true" width="12" height="14" viewBox="0 0 12 14"><path d="M1 1.2v11.6c0 .6.6.9 1.1.6l9.2-5.8c.5-.3.5-.9 0-1.2L2.1.6C1.6.3 1 .6 1 1.2z" fill="currentColor"/></svg>
+            Watch trailer
+          </a>
+        {% endif %}
+        {% if title.imdb_url %}<a class="button secondary" href="{{ title.imdb_url }}" target="_blank" rel="noopener">IMDb page</a>{% endif %}
+        <a class="button secondary" href="{{ title.source_url }}" target="_blank" rel="noopener">{{ title.get_source_display }} page</a>
+      </div>
 
       {% if public_entry %}
         <section class="take" aria-labelledby="take-h">
@@ -85,5 +114,20 @@
       {% endif %}
     </div>
   </div>
+
+  {% if title.cast %}
+  <section class="shelf cast" aria-labelledby="cast-h">
+    <h2 id="cast-h">{% if title.kind == "anime" %}Main characters{% else %}Cast{% endif %}</h2>
+    <ul class="shelf-row">
+      {% for person in title.cast %}
+        <li class="person">
+          {% if person.photo %}<img src="{{ person.photo }}" alt="" loading="lazy" width="96" height="96">{% else %}<span class="person-blank" aria-hidden="true">{{ person.name|slice:":1" }}</span>{% endif %}
+          <span class="person-name">{% if title.kind == "anime" %}{{ person.character }}{% else %}{{ person.name }}{% endif %}</span>
+          {% if title.kind == "anime" %}{% if person.name != person.character %}<span class="person-role">voiced by {{ person.name }}</span>{% endif %}{% elif person.character %}<span class="person-role">{{ person.character }}</span>{% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
 </article>
 {% endblock %}

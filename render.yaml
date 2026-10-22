@@ -18,6 +18,10 @@ services:
         sync: false   # paste the Neon connection string in the Render dashboard
       - key: TMDB_TOKEN
         sync: false   # TMDB API Read Access Token
+      - key: OMDB_API_KEY
+        sync: false   # free key from omdbapi.com (IMDb ratings, Rotten Tomatoes critics)
+      - key: REFRESH_TOKEN
+        sync: false   # long random string, also stored as a GitHub secret for the nightly job
       - key: DJANGO_ADMIN_USERNAME
         sync: false
       - key: DJANGO_ADMIN_PASSWORD

@@ -1,7 +1,7 @@
 {% extends "tracker/base.html" %}
 {% block title %}Import · CurtainCall{% endblock %}
 {% block content %}
-<div class="pagehead"><h1>Import a list</h1></div>
+<div class="pagehead"><h1>Import a list</h1><a href="{% url 'duplicates' %}">Check for duplicates</a></div>
 <section class="card">
   <p>Upload a CSV with a <code>Title</code> column and an optional <code>Year</code> column (the Letterboxd import format works as is).
   Each row is matched to TMDB or AniList; anything ambiguous waits for you to pick.</p>
