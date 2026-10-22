@@ -1,22 +1,31 @@
 <form class="filters" hx-get="{{ request.path }}" hx-target="#grid" hx-swap="outerHTML" hx-push-url="true"
-      hx-trigger="change, input from:#q delay:300ms">
-  <input id="q" type="search" name="q" placeholder="Filter by title" value="{{ params.q|default:'' }}">
-  <select name="kind">
-    <option value="">All types</option>
+      hx-indicator="#grid" hx-trigger="change, input from:#q delay:250ms" role="search" aria-label="Filter the library">
+  <div class="segmented" role="radiogroup" aria-label="Type">
     {% for value, label in kind_choices %}
-      <option value="{{ value }}" {% if params.kind == value %}selected{% endif %}>{{ label }}</option>
+      <label><input type="radio" name="kind" value="{{ value }}" {% if params.kind|default:"" == value %}checked{% endif %}><span>{{ label }}</span></label>
+    {% endfor %}
+  </div>
+  <label class="visually-hidden" for="style">Style</label>
+  <select id="style" name="style">
+    <option value="">Any style</option>
+    {% for value, label in style_choices %}
+      <option value="{{ value }}" {% if params.style == value %}selected{% endif %}>{{ label }}</option>
     {% endfor %}
   </select>
-  <select name="status">
+  <label class="visually-hidden" for="status">Status</label>
+  <select id="status" name="status">
     <option value="">Any status</option>
     {% for value, label in status_choices %}
       <option value="{{ value }}" {% if params.status == value %}selected{% endif %}>{{ label }}</option>
     {% endfor %}
   </select>
-  <select name="sort">
-    <option value="recent" {% if params.sort == "recent" %}selected{% endif %}>Recently updated</option>
+  <label class="visually-hidden" for="sort">Sort by</label>
+  <select id="sort" name="sort">
+    <option value="recent" {% if params.sort == "recent" %}selected{% endif %}>Recently added</option>
     <option value="name" {% if params.sort == "name" %}selected{% endif %}>Title A–Z</option>
-    <option value="year" {% if params.sort == "year" %}selected{% endif %}>Release year</option>
-    <option value="rating" {% if params.sort == "rating" %}selected{% endif %}>Your rating</option>
+    <option value="year" {% if params.sort == "year" %}selected{% endif %}>Newest release</option>
+    <option value="rating" {% if params.sort == "rating" %}selected{% endif %}>Highest rated</option>
   </select>
+  <label class="visually-hidden" for="q">Search the library</label>
+  <input id="q" type="search" name="q" placeholder="Search the library" value="{{ params.q|default:'' }}" autocomplete="off">
 </form>

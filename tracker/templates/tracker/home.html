@@ -1,13 +1,10 @@
 {% extends "tracker/base.html" %}
 {% block content %}
 <section class="hero">
-  <h1>Films, series and anime in one list.</h1>
-  <p class="muted">A personal watch tracker with metadata from TMDB and AniList.</p>
-  {% if owners %}
-    <p>Browse a library:
-      {% for o in owners %}<a class="pill" href="{% url 'profile' o.username %}">{{ o.username }} · {{ o.n }}</a>{% endfor %}
-    </p>
-  {% endif %}
-  <p><a class="button" href="{% url 'login' %}">Log in</a></p>
+  <div>
+    <h1>CurtainCall</h1>
+    <p class="lede">A library of films, series and anime. Nothing has been added yet.</p>
+    <div class="hero-actions"><a class="button" href="{% url 'login' %}">Log in to start</a></div>
+  </div>
 </section>
 {% endblock %}

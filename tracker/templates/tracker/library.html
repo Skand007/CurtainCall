@@ -1,10 +1,32 @@
 {% extends "tracker/base.html" %}
-{% block title %}Library · CurtainCall{% endblock %}
+{% load humanize tracker_extras %}
 {% block content %}
-<div class="pagehead">
-  <h1>Your library</h1>
-  <a class="button" href="{% url 'search' %}">Add a title</a>
-</div>
+<section class="hero">
+  <div>
+    <h1>{{ owner_name }}</h1>
+    <p class="lede">
+      {% if watched_count %}
+        <strong>{{ watched_count|intcomma }} title{{ watched_count|pluralize }} watched</strong> across films, series and anime{% if hours %}, about {{ hours|intcomma }} hours in all{% endif %}.
+      {% else %}
+        Nothing watched yet. Titles appear here as they are added.
+      {% endif %}
+    </p>
+    <div class="hero-actions">
+      <a class="button secondary" href="{% url 'stats' owner.username %}">See the stats</a>
+      {% if editable %}<a class="button" href="{% url 'search' %}">Add a title</a>{% endif %}
+    </div>
+  </div>
+  {% if recent %}
+    <div class="curtain-call" aria-label="Recently watched">
+      {% for e in recent %}
+        <a href="{% url 'title' e.title.pk %}" style="{{ forloop.counter0|tilt }}" title="{{ e.title }}">
+          <img src="{{ e.title.poster_url }}" alt="{{ e.title.name }}" loading="eager" width="108" height="162">
+        </a>
+      {% endfor %}
+    </div>
+  {% endif %}
+</section>
+
 {% include "tracker/_filters.html" %}
 {% include "tracker/_grid.html" %}
 {% endblock %}

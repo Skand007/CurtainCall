@@ -1,15 +1,16 @@
 {% extends "tracker/base.html" %}
 {% block title %}Add a title · CurtainCall{% endblock %}
 {% block content %}
-<h1>Add a title</h1>
-<form class="filters" hx-get="{% url 'search' %}" hx-target="#results" hx-push-url="true"
-      hx-trigger="submit, change from:select, input from:#sq delay:500ms">
-  <input id="sq" type="search" name="q" value="{{ query }}" placeholder="Search by title" autofocus>
-  <select name="source">
-    <option value="movie" {% if source == "movie" %}selected{% endif %}>Films (TMDB)</option>
-    <option value="tv" {% if source == "tv" %}selected{% endif %}>Series (TMDB)</option>
-    <option value="anime" {% if source == "anime" %}selected{% endif %}>Anime (AniList)</option>
-  </select>
+<div class="pagehead"><h1>Add a title</h1></div>
+<form class="filters" hx-get="{% url 'search' %}" hx-target="#results" hx-push-url="true" hx-indicator="#results"
+      hx-trigger="submit, change, input from:#sq delay:400ms" role="search">
+  <div class="segmented" role="radiogroup" aria-label="Search in">
+    <label><input type="radio" name="source" value="movie" {% if source == "movie" %}checked{% endif %}><span>Films</span></label>
+    <label><input type="radio" name="source" value="tv" {% if source == "tv" %}checked{% endif %}><span>Series</span></label>
+    <label><input type="radio" name="source" value="anime" {% if source == "anime" %}checked{% endif %}><span>Anime</span></label>
+  </div>
+  <label class="visually-hidden" for="sq">Title</label>
+  <input id="sq" type="search" name="q" value="{{ query }}" placeholder="Search by title" autofocus autocomplete="off" style="margin-left:0;max-width:none">
   <button class="button">Search</button>
 </form>
 <div id="results">{% include "tracker/_search_results.html" %}</div>

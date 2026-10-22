@@ -36,6 +36,13 @@ def user(db):
 
 
 @pytest.fixture
+def owner(db):
+    return get_user_model().objects.create_superuser(
+        "skand", password="pw-for-tests-123", email="", first_name="Skand", last_name="Gupta"
+    )
+
+
+@pytest.fixture
 def client_in(client, user):
     client.force_login(user)
     return client

@@ -16,4 +16,5 @@ urlpatterns = [
     path("import/row/<int:row_pk>/resolve/", views.import_resolve, name="import_resolve"),
     path("u/<str:username>/", views.profile, name="profile"),
     path("u/<str:username>/stats/", views.stats, name="stats"),
+    path("account/password/", views.change_password, name="change_password"),
 ]

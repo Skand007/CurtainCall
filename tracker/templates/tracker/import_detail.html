@@ -12,6 +12,6 @@
   <p class="muted">Pick the right match, search again with a corrected title or year, or skip it.</p>
   {% for row in review_rows %}{% include "tracker/_review_row.html" %}{% endfor %}
 {% elif not progress.pending %}
-  <p>Everything in this file is settled. <a href="{% url 'library' %}">Go to your library →</a></p>
+  <p>Everything in this file is settled. <a href="{% url 'home' %}">Open your library</a></p>
 {% endif %}
 {% endblock %}

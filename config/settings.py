@@ -57,6 +57,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "tracker.context.site",
             ],
         },
     },
@@ -96,8 +97,11 @@ STORAGES = {
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 LOGIN_URL = "login"
-LOGIN_REDIRECT_URL = "library"
+LOGIN_REDIRECT_URL = "home"
 LOGOUT_REDIRECT_URL = "home"
+
+# Whose library the public site shows. Empty means the first superuser.
+OWNER_USERNAME = os.environ.get("OWNER_USERNAME", "")
 
 # External APIs
 TMDB_TOKEN = os.environ.get("TMDB_TOKEN", "")

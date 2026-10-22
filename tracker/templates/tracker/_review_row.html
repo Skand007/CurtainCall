@@ -2,7 +2,7 @@
   <div class="review-head">
     <strong>{{ row.raw_title }}</strong> <span class="muted">{{ row.raw_year|default:"no year" }}</span>
     <span class="pill {% if row.state == 'matched' %}ok{% endif %}">{{ row.get_state_display }}</span>
-    {% if row.matched_title %}→ <a href="{% url 'title' row.matched_title.pk %}">{{ row.matched_title }}</a>{% endif %}
+    {% if row.matched_title %}<span class="muted">matched to</span> <a href="{% url 'title' row.matched_title.pk %}">{{ row.matched_title }}</a>{% endif %}
   </div>
 
   {% if row.state == "review" or row.state == "not_found" %}
@@ -12,7 +12,7 @@
           <label class="candidate">
             <input type="radio" name="choice" value="{{ forloop.counter0 }}" required>
             {% if c.poster_url %}<img src="{{ c.poster_url }}" alt="" loading="lazy">{% else %}<span class="noposter small"></span>{% endif %}
-            <span>{{ c.name }} <span class="muted">{{ c.year|default:"?" }} · {{ c.kind }} · {{ c.source }}</span></span>
+            <span>{{ c.name }} <span class="muted">{{ c.year|default:"no year" }}, {{ c.kind }} from {{ c.source|upper }}</span></span>
           </label>
         {% endfor %}
         <button class="button" name="action" value="pick">Use selected</button>

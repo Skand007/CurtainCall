@@ -21,11 +21,77 @@ def process_all(client, batch):
     raise AssertionError("import never finished")
 
 
-def test_pages_need_login(client):
-    for name in ["library", "search", "import_list"]:
+def test_owner_pages_need_login(client):
+    for name in ["search", "import_list", "change_password"]:
         resp = client.get(reverse(name))
         assert resp.status_code == 302
         assert reverse("login") in resp["Location"]
+
+
+def test_old_library_link_sends_visitors_to_the_public_page(client, owner):
+    resp = client.get(reverse("library") + "?kind=anime")
+    assert resp.status_code == 302
+    assert resp["Location"] == reverse("home") + "?kind=anime"
+
+
+def test_visitors_see_the_owners_library_on_the_homepage(client, owner):
+    heat = Title.objects.create(
+        source="tmdb",
+        source_id="949",
+        kind="movie",
+        name="Heat",
+        year=1995,
+        runtime_minutes=170,
+        poster_url="https://img/heat.jpg",
+    )
+    Entry.objects.create(user=owner, title=heat, rating=4.5)
+    resp = client.get(reverse("home"))
+    assert resp.status_code == 200
+    assert b"Skand Gupta" in resp.content
+    assert b"Heat" in resp.content
+    assert b"Owner login" in resp.content
+    assert b"Add a title" not in resp.content  # owner tools stay hidden
+    assert resp.context["hours"] == 3
+
+
+def test_empty_site_shows_a_starting_page(client, db):
+    resp = client.get(reverse("home"))
+    assert resp.status_code == 200
+    assert b"Log in to start" in resp.content
+
+
+def test_title_page_shows_the_owners_take_but_not_private_notes(client, owner):
+    heat = Title.objects.create(source="tmdb", source_id="949", kind="movie", name="Heat", year=1995)
+    Entry.objects.create(user=owner, title=heat, rating=4.5, notes="secret thoughts")
+    resp = client.get(reverse("title", args=[heat.pk]))
+    assert b"Skand Gupta's take" in resp.content
+    assert "★★★★½".encode() in resp.content
+    assert b"secret thoughts" not in resp.content
+
+
+def test_change_password_keeps_you_logged_in(client, owner):
+    client.force_login(owner)
+    resp = client.post(
+        reverse("change_password"),
+        {
+            "old_password": "pw-for-tests-123",
+            "new_password1": "a-much-better-pass-42",
+            "new_password2": "a-much-better-pass-42",
+        },
+    )
+    assert resp.status_code == 302
+    owner.refresh_from_db()
+    assert owner.check_password("a-much-better-pass-42")
+    assert client.get(reverse("search")).status_code == 200
+
+
+def test_stars_filter():
+    from tracker.templatetags.tracker_extras import stars
+
+    assert stars(4.5) == "★★★★½"
+    assert stars(1) == "★"
+    assert stars(0.5) == "½"
+    assert stars(None) == ""
 
 
 def test_csv_import_matches_and_fills_library(client_in, user, fake_sources):

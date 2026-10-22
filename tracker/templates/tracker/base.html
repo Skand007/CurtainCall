@@ -3,7 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}CurtainCall{% endblock %}</title>
+  <title>{% block title %}{% if site_owner_name %}{{ site_owner_name }} · {% endif %}CurtainCall{% endblock %}</title>
+  <meta name="description" content="{% if site_owner_name %}{{ site_owner_name }}'s{% else %}A{% endif %} library of films, series and anime, with ratings and stats.">
+  <meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#1c1b20" media="(prefers-color-scheme: dark)">
   <link rel="stylesheet" href="{% static 'tracker/style.css' %}">
   <script src="https://unpkg.com/htmx.org@2.0.4" defer></script>
   {% block head %}{% endblock %}
@@ -11,26 +14,35 @@
 <body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
   <header class="topbar">
     <a class="brand" href="{% url 'home' %}">CurtainCall</a>
-    <nav>
+    <nav aria-label="Main">
+      <a href="{% url 'home' %}" {% if request.resolver_match.url_name == 'home' or request.resolver_match.url_name == 'library' or request.resolver_match.url_name == 'profile' %}aria-current="page"{% endif %}>Library</a>
+      {% if site_owner %}<a href="{% url 'stats' site_owner.username %}" {% if request.resolver_match.url_name == 'stats' %}aria-current="page"{% endif %}>Stats</a>{% endif %}
       {% if user.is_authenticated %}
-        <a href="{% url 'library' %}">Library</a>
-        <a href="{% url 'search' %}">Add</a>
-        <a href="{% url 'import_list' %}">Import</a>
-        <a href="{% url 'profile' user.username %}">Profile</a>
-        <a href="{% url 'stats' user.username %}">Stats</a>
-        <form method="post" action="{% url 'logout' %}" class="inline">{% csrf_token %}<button class="link">Log out</button></form>
-      {% else %}
-        <a href="{% url 'login' %}">Log in</a>
+        <span class="owner-tools">
+          <a href="{% url 'search' %}" {% if request.resolver_match.url_name == 'search' %}aria-current="page"{% endif %}>Add a title</a>
+          <a href="{% url 'import_list' %}">Import</a>
+          <a href="{% url 'change_password' %}">Password</a>
+          <form method="post" action="{% url 'logout' %}" style="display:inline">{% csrf_token %}<button class="link">Log out</button></form>
+        </span>
       {% endif %}
     </nav>
   </header>
   <main>
-    {% for message in messages %}<div class="flash {{ message.tags }}">{{ message }}</div>{% endfor %}
+    {% for message in messages %}<div class="flash" role="status">{{ message }}</div>{% endfor %}
     {% block content %}{% endblock %}
   </main>
-  <footer>
-    Film and series data from <a href="https://www.themoviedb.org/">TMDB</a>. This product uses the TMDB API but is not endorsed or certified by TMDB.
-    Anime data from <a href="https://anilist.co/">AniList</a>.
+  <footer class="small">
+    <p>Film and series data from <a href="https://www.themoviedb.org/">TMDB</a>. This product uses the TMDB API but is not endorsed or certified by TMDB. Anime data from <a href="https://anilist.co/">AniList</a>.</p>
+    <p><a href="https://github.com/Skand007/CurtainCall">Source on GitHub</a>{% if not user.is_authenticated %}&ensp;<a href="{% url 'login' %}">Owner login</a>{% endif %}</p>
   </footer>
+  <script>
+    // Scroll edge effect: show the navigation's soft shadow only when content sits under it.
+    (function () {
+      var root = document.documentElement;
+      function update() { if (window.scrollY > 4) root.setAttribute("data-scrolled", ""); else root.removeAttribute("data-scrolled"); }
+      window.addEventListener("scroll", update, { passive: true });
+      update();
+    })();
+  </script>
 </body>
 </html>

@@ -1,5 +1,5 @@
 {% if error %}<p class="error">{{ error }}</p>{% endif %}
-{% if query and not results and not error %}<p class="muted">No results for “{{ query }}”.</p>{% endif %}
+{% if query and not results and not error %}<p class="muted">Nothing found for “{{ query }}”. Check the spelling, or try the other tabs.</p>{% endif %}
 <ul class="results">
   {% for r in results %}
     <li class="result">
@@ -11,14 +11,14 @@
       </div>
       <div class="result-actions">
         {% if r.owned %}
-          <span class="pill ok">In library</span>
+          <span class="added">In your library</span>
         {% else %}
           <form hx-post="{% url 'add_title' %}" hx-swap="outerHTML">
             <input type="hidden" name="source" value="{{ r.source }}">
             <input type="hidden" name="kind" value="{{ r.kind }}">
             <input type="hidden" name="source_id" value="{{ r.source_id }}">
-            <button class="button" name="status" value="watched">Watched</button>
-            <button class="button secondary" name="status" value="planned">Plan</button>
+            <button class="button" name="status" value="watched">Mark as watched</button>
+            <button class="button secondary" name="status" value="planned">Plan to watch</button>
           </form>
         {% endif %}
       </div>

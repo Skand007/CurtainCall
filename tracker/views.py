@@ -2,13 +2,16 @@ import csv
 import io
 import logging
 
+from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import PasswordChangeForm
 from django.core.paginator import Paginator
-from django.db.models import Count, Q
+from django.db.models import Count, F, Q, Sum
 from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from . import matching, sources
@@ -20,12 +23,12 @@ log = logging.getLogger(__name__)
 BATCH_SIZE = 10  # rows matched per HTMX request, keeps each request well under the host timeout
 MAX_UPLOAD_ROWS = 5000
 KIND_FILTERS = [
+    ("", "All"),
     (Title.KIND_MOVIE, "Films"),
     (Title.KIND_TV, "Series"),
     (Title.KIND_ANIME, "Anime"),
-    ("live", "Live-action"),
-    ("animated", "Animated"),
 ]
+STYLE_FILTERS = [("live", "Live-action"), ("animated", "Animated")]
 
 
 def is_htmx(request):
@@ -40,14 +43,17 @@ def add_to_library(user, title, status=Entry.STATUS_WATCHED):
 def filtered_entries(user, params):
     qs = Entry.objects.filter(user=user).select_related("title")
     kind = params.get("kind", "")
+    style = params.get("style", "")
     status = params.get("status", "")
     query = params.get("q", "").strip()
-    if kind == "animated":
-        qs = qs.filter(Q(title__animated=True) | Q(title__kind=Title.KIND_ANIME))
-    elif kind == "live":
-        qs = qs.filter(title__animated=False).exclude(title__kind=Title.KIND_ANIME)
-    elif kind:
+    if kind in ("live", "animated"):  # older links used kind=live / kind=animated
+        style, kind = kind, ""
+    if kind:
         qs = qs.filter(title__kind=kind)
+    if style == "animated":
+        qs = qs.filter(Q(title__animated=True) | Q(title__kind=Title.KIND_ANIME))
+    elif style == "live":
+        qs = qs.filter(title__animated=False).exclude(title__kind=Title.KIND_ANIME)
     if status:
         qs = qs.filter(status=status)
     if query:
@@ -65,56 +71,103 @@ def filtered_entries(user, params):
 # ---------------------------------------------------------------- pages
 
 
-def home(request):
-    if request.user.is_authenticated:
-        return redirect("library")
-    owners = get_user_model().objects.annotate(n=Count("entries")).filter(n__gt=0).order_by("-n")[:5]
-    return render(request, "tracker/home.html", {"owners": owners})
+def get_owner():
+    """The person whose library the site shows: OWNER_USERNAME if set, else the first superuser."""
+    users = get_user_model().objects
+    if settings.OWNER_USERNAME:
+        return users.filter(username=settings.OWNER_USERNAME).first()
+    return users.filter(is_superuser=True).order_by("id").first()
 
 
-@login_required
-def library(request):
-    page = Paginator(filtered_entries(request.user, request.GET), 60).get_page(request.GET.get("page"))
+def display_name(user):
+    return user.get_full_name() or user.username
+
+
+def library_page(request, owner):
+    page = Paginator(filtered_entries(owner, request.GET), 60).get_page(request.GET.get("page"))
+    watched = Entry.objects.filter(user=owner, status=Entry.STATUS_WATCHED)
+    minutes = watched.aggregate(m=Sum("title__runtime_minutes"))["m"] or 0
     context = {
+        "owner": owner,
+        "owner_name": display_name(owner),
         "page": page,
         "params": request.GET,
         "status_choices": Entry.STATUS_CHOICES,
         "kind_choices": KIND_FILTERS,
-        "editable": True,
+        "style_choices": STYLE_FILTERS,
+        "editable": request.user == owner,
+        "watched_count": watched.count(),
+        "hours": round(minutes / 60),
+        "recent": watched.exclude(title__poster_url="")
+        .select_related("title")
+        .order_by(F("watched_on").desc(nulls_last=True), "-updated_at")[:6],
     }
     template = "tracker/_grid.html" if is_htmx(request) else "tracker/library.html"
     return render(request, template, context)
 
 
+def home(request):
+    owner = get_owner()
+    if owner is None:
+        return render(request, "tracker/home.html")
+    return library_page(request, owner)
+
+
+def library(request):
+    # Old links pointed here; everyone now lands on the public library.
+    if not request.user.is_authenticated:
+        query = request.GET.urlencode()
+        return redirect(reverse("home") + ("?" + query if query else ""))
+    return library_page(request, request.user)
+
+
 def profile(request, username):
-    owner = get_object_or_404(get_user_model(), username=username)
-    page = Paginator(filtered_entries(owner, request.GET), 60).get_page(request.GET.get("page"))
-    context = {
-        "owner": owner,
-        "page": page,
-        "params": request.GET,
-        "status_choices": Entry.STATUS_CHOICES,
-        "kind_choices": KIND_FILTERS,
-        "editable": request.user == owner,
-        "counts": Entry.objects.filter(user=owner).values("status").annotate(n=Count("id")),
-    }
-    template = "tracker/_grid.html" if is_htmx(request) else "tracker/profile.html"
-    return render(request, template, context)
+    return library_page(request, get_object_or_404(get_user_model(), username=username))
 
 
 def stats(request, username):
     owner = get_object_or_404(get_user_model(), username=username)
-    return render(request, "tracker/stats.html", {"owner": owner, "stats": library_stats(owner)})
+    data = library_stats(owner)
+    context = {
+        "owner": owner,
+        "owner_name": display_name(owner),
+        "stats": data,
+        "decade_rows": list(zip(data["decades"]["labels"], data["decades"]["values"])),
+        "rating_rows": list(zip(data["ratings"]["labels"], data["ratings"]["values"])),
+    }
+    return render(request, "tracker/stats.html", context)
 
 
 def title_detail(request, pk):
     title = get_object_or_404(Title, pk=pk)
-    entry = None
+    owner = get_owner()
+    viewer_entry = None
     if request.user.is_authenticated:
-        entry = Entry.objects.filter(user=request.user, title=title).first()
-    return render(
-        request, "tracker/title.html", {"title": title, "entry": entry, "status_choices": Entry.STATUS_CHOICES}
-    )
+        viewer_entry = Entry.objects.filter(user=request.user, title=title).first()
+    # Visitors see the site owner's take on the title, read-only. Private notes are never shown.
+    public_entry = None
+    if owner is not None and request.user != owner:
+        public_entry = Entry.objects.filter(user=owner, title=title).first()
+    context = {
+        "title": title,
+        "entry": viewer_entry,
+        "public_entry": public_entry,
+        "owner_name": display_name(owner) if owner else "",
+        "status_choices": Entry.STATUS_CHOICES,
+        "rating_choices": [(x / 2, x) for x in range(1, 11)],
+    }
+    return render(request, "tracker/title.html", context)
+
+
+@login_required
+def change_password(request):
+    form = PasswordChangeForm(request.user, request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        user = form.save()
+        update_session_auth_hash(request, user)  # stay logged in after the change
+        messages.success(request, "Password changed.")
+        return redirect("home")
+    return render(request, "tracker/password.html", {"form": form})
 
 
 # ---------------------------------------------------------------- search and entries
@@ -168,7 +221,8 @@ def add_title(request):
         log.warning("add failed: %s", exc)
         return HttpResponse('<span class="muted">Could not reach the service, try again</span>')
     add_to_library(request.user, title, status)
-    return HttpResponse(f'<a class="pill ok" href="/title/{title.pk}/">Added as {status}</a>')
+    label = dict(Entry.STATUS_CHOICES)[status]
+    return HttpResponse(f'<a class="added" href="/title/{title.pk}/">Added to {label}</a>')
 
 
 @login_required
@@ -196,7 +250,7 @@ def update_entry(request, pk):
         entry.notes = request.POST.get("notes", "")[:5000]
     entry.save()
     if is_htmx(request):
-        return HttpResponse('<span class="muted saved">Saved</span>')
+        return HttpResponse('<span class="saved" role="status">Saved</span>')
     return redirect("title", pk=entry.title_id)
 
 

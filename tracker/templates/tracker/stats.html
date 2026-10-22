@@ -1,36 +1,45 @@
 {% extends "tracker/base.html" %}
-{% block title %}{{ owner.username }}'s stats · CurtainCall{% endblock %}
+{% load humanize %}
+{% block title %}{{ owner_name }}'s stats · CurtainCall{% endblock %}
 {% block head %}<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>{% endblock %}
 {% block content %}
-<div class="pagehead">
-  <h1>{{ owner.username }}'s stats</h1>
-  <a href="{% url 'profile' owner.username %}">Library →</a>
-</div>
-
-<div class="tiles">
-  <div class="tile"><span class="big">{{ stats.total }}</span><span class="muted">titles watched</span></div>
-  <div class="tile"><span class="big">{{ stats.hours|default:0 }}</span><span class="muted">hours{% if stats.missing_runtime %} ({{ stats.missing_runtime }} without runtime){% endif %}</span></div>
-  <div class="tile"><span class="big">{{ stats.live_action }}</span><span class="muted">live-action</span></div>
-  <div class="tile"><span class="big">{{ stats.animated }}</span><span class="muted">animated</span></div>
-</div>
+<p class="stats-lede">{{ owner_name }} has watched {{ stats.total|intcomma }} title{{ stats.total|pluralize }}, about {{ stats.hours|default:0|intcomma }} hours.</p>
+<p class="stats-sub">
+  {{ stats.live_action|intcomma }} live-action and {{ stats.animated|intcomma }} animated.
+  {% if stats.missing_runtime %}{{ stats.missing_runtime|intcomma }} title{{ stats.missing_runtime|pluralize }} {{ stats.missing_runtime|pluralize:'has,have' }} no runtime yet, so the hours are a lower bound.{% endif %}
+</p>
 
 <div class="charts">
-  <section class="card"><h2>By release decade</h2><canvas id="decades" height="220"></canvas></section>
-  <section class="card"><h2>Your ratings</h2><canvas id="ratings" height="220"></canvas></section>
+  <section class="card">
+    <h2>Titles by release decade</h2>
+    <div class="chart-box"><canvas id="decades" role="img" aria-label="Bar chart of watched titles by release decade"></canvas></div>
+    <details class="as-table">
+      <summary>Show as a table</summary>
+      <table><tbody>{% for label, value in decade_rows %}<tr><th scope="row">{{ label }}</th><td>{{ value }}</td></tr>{% endfor %}</tbody></table>
+    </details>
+  </section>
+  <section class="card">
+    <h2>Ratings given</h2>
+    <div class="chart-box"><canvas id="ratings" role="img" aria-label="Bar chart of how many titles received each star rating"></canvas></div>
+    <details class="as-table">
+      <summary>Show as a table</summary>
+      <table><tbody>{% for label, value in rating_rows %}<tr><th scope="row">{{ label }} stars</th><td>{{ value }}</td></tr>{% endfor %}</tbody></table>
+    </details>
+  </section>
 </div>
 
 <div class="charts">
   <section class="card">
     <h2>Top genres</h2>
-    <ol class="ranked">{% for name, n in stats.genres %}<li><span>{{ name }}</span><span class="muted">{{ n }}</span></li>{% empty %}<li class="muted">No genre data yet</li>{% endfor %}</ol>
+    <ol class="ranked">{% for name, n in stats.genres %}<li><span>{{ name }}</span><span class="n">{{ n }}</span></li>{% empty %}<li class="muted">Genres appear once titles have details.</li>{% endfor %}</ol>
   </section>
   <section class="card">
     <h2>Most-watched directors</h2>
-    <ol class="ranked">{% for name, n in stats.directors %}<li><span>{{ name }}</span><span class="muted">{{ n }}</span></li>{% empty %}<li class="muted">No director data yet</li>{% endfor %}</ol>
+    <ol class="ranked">{% for name, n in stats.directors %}<li><span>{{ name }}</span><span class="n">{{ n }}</span></li>{% empty %}<li class="muted">Directors appear once films have details.</li>{% endfor %}</ol>
   </section>
   <section class="card">
     <h2>Anime studios</h2>
-    <ol class="ranked">{% for name, n in stats.studios %}<li><span>{{ name }}</span><span class="muted">{{ n }}</span></li>{% empty %}<li class="muted">No studio data yet</li>{% endfor %}</ol>
+    <ol class="ranked">{% for name, n in stats.studios %}<li><span>{{ name }}</span><span class="n">{{ n }}</span></li>{% empty %}<li class="muted">Studios appear once anime is added.</li>{% endfor %}</ol>
   </section>
 </div>
 
@@ -38,19 +47,37 @@
 {{ stats.ratings|json_script:"ratings-data" }}
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-  var accent = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#3b82f6";
-  var ink = getComputedStyle(document.documentElement).getPropertyValue("--muted").trim() || "#888";
-  Chart.defaults.color = ink;
-  function bar(id, dataId) {
+  var css = getComputedStyle(document.documentElement);
+  var accent = css.getPropertyValue("--curtain").trim();
+  var ink2 = css.getPropertyValue("--ink-2").trim();
+  var hairline = css.getPropertyValue("--hairline").trim();
+  var font = getComputedStyle(document.body).fontFamily;
+  var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  Chart.defaults.color = ink2;
+  Chart.defaults.font.family = font;
+  Chart.defaults.font.size = 12;
+
+  function bar(id, dataId, unit) {
     var d = JSON.parse(document.getElementById(dataId).textContent);
     new Chart(document.getElementById(id), {
       type: "bar",
-      data: { labels: d.labels, datasets: [{ data: d.values, backgroundColor: accent, borderRadius: 3 }] },
-      options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { grid: { display: false } } } }
+      data: { labels: d.labels, datasets: [{ data: d.values, backgroundColor: accent, borderRadius: 4, borderSkipped: "start", maxBarThickness: 28 }] },
+      options: {
+        maintainAspectRatio: false,
+        animation: reduce ? false : { duration: 300 },
+        plugins: {
+          legend: { display: false },
+          tooltip: { displayColors: false, callbacks: { label: function (c) { return c.parsed.y + " title" + (c.parsed.y === 1 ? "" : "s"); } } }
+        },
+        scales: {
+          y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: hairline }, border: { display: false } },
+          x: { grid: { display: false }, border: { display: false }, title: { display: !!unit, text: unit } }
+        }
+      }
     });
   }
-  bar("decades", "decades-data");
-  bar("ratings", "ratings-data");
+  bar("decades", "decades-data", "");
+  bar("ratings", "ratings-data", "Stars");
 });
 </script>
 {% endblock %}

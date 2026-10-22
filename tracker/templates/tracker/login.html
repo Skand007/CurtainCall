@@ -2,11 +2,11 @@
 {% block title %}Log in · CurtainCall{% endblock %}
 {% block content %}
 <section class="narrow card">
-  <h1>Log in</h1>
+  <h1 style="font-size:1.75rem;margin-bottom:1rem">Log in</h1>
   <form method="post">
     {% csrf_token %}
-    {% if form.errors %}<p class="error">Username or password is wrong.</p>{% endif %}
-    <label>Username <input name="username" autocomplete="username" required></label>
+    {% if form.errors %}<p class="error small">That username and password don't match. Check both and try again.</p>{% endif %}
+    <label>Username <input name="username" autocomplete="username" required autofocus></label>
     <label>Password <input type="password" name="password" autocomplete="current-password" required></label>
     <input type="hidden" name="next" value="{{ next }}">
     <button class="button">Log in</button>
