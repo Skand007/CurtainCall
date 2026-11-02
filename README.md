@@ -34,7 +34,7 @@ Film and series data from [TMDB](https://www.themoviedb.org/), Japanese animatio
   directors and studios. Every chart has a table view.
 - **Nightly refresh:** a scheduled GitHub Actions job calls a token-protected endpoint in small
   batches to fill missing details and scores, staying inside the OMDb free tier's daily limit.
-- **Quality checks:** 101 tests with all APIs mocked, data-quality checks, linting, all in CI on Postgres.
+- **Quality checks:** 102 tests with all APIs mocked, data-quality checks, linting, all in CI on Postgres.
 
 ## Architecture
 
@@ -82,7 +82,7 @@ Without `DATABASE_URL` the app uses a local SQLite file.
 ## Tests and checks
 
 ```bash
-pytest                       # 101 tests, all API calls mocked
+pytest                       # 102 tests, all API calls mocked
 ruff check . && ruff format --check .
 python manage.py check_data  # data quality checks
 ```

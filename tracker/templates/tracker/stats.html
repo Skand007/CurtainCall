@@ -6,7 +6,7 @@
 <p class="stats-lede">{{ owner_name }} has watched <a href="{{ links.all }}">{{ stats.total|intcomma }} title{{ stats.total|pluralize }}</a>, about {{ stats.hours|default:0|intcomma }} hours.</p>
 <p class="stats-sub">
   <a href="{{ links.live }}">{{ stats.live_action|intcomma }} live action</a> and <a href="{{ links.animated }}">{{ stats.animated|intcomma }} animated</a>.
-  {% if stats.missing_runtime %}{{ stats.missing_runtime|intcomma }} title{{ stats.missing_runtime|pluralize }} {{ stats.missing_runtime|pluralize:'has,have' }} no runtime yet, so the hours are a lower bound.{% endif %}
+  {% if stats.missing_runtime %}<a href="{{ links.no_runtime }}">{{ stats.missing_runtime|intcomma }} title{{ stats.missing_runtime|pluralize }}</a> {{ stats.missing_runtime|pluralize:'has,have' }} no runtime yet, so the hours are a lower bound.{% endif %}
 </p>
 
 <div class="charts">

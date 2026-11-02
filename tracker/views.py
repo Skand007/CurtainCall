@@ -31,7 +31,7 @@ BATCH_SECONDS = 15  # ...and stop early when MyAnimeList's pacing makes a batch 
 MAX_UPLOAD_ROWS = 5000
 KIND_FILTERS = [("", "All"), (Title.KIND_MOVIE, "Films"), (Title.KIND_TV, "Series")]
 STYLE_FILTERS = [("live", "Live action"), ("animated", "Animated")]
-FACETS = ["decade", "year", "genre", "director", "studio", "critics", "audience", "source"]
+FACETS = ["decade", "year", "genre", "director", "studio", "critics", "audience", "source", "runtime"]
 SEARCH_SOURCES = [("movie", "Films"), ("tv", "Series"), ("mal", "MyAnimeList")]
 RETRY_KINDS = [(Title.KIND_MOVIE, "Film (TMDB)"), (Title.KIND_TV, "Series (TMDB)"), ("mal", "Animation (MyAnimeList)")]
 
@@ -81,6 +81,8 @@ def filtered_entries(user, params):
     critics = as_int(params.get("critics"))
     if critics is not None:
         qs = qs.filter(title__rt_critics__gte=critics, title__rt_critics__lte=100 if critics >= 90 else critics + 9)
+    if params.get("runtime") == "missing":
+        qs = qs.filter(Q(title__runtime_minutes__isnull=True) | Q(title__runtime_minutes=0))
     if params.get("source") in dict(Title.SOURCE_CHOICES):
         qs = qs.filter(title__source=params["source"])
     # List fields (genres, directors, studios) and the rounded audience score are matched in Python,
@@ -121,6 +123,8 @@ def facet_label(name, value):
         return f"Critics {label}%" if name == "critics" else f"Audience {label}"
     if name == "source":
         return dict(Title.SOURCE_CHOICES).get(value, value)
+    if name == "runtime":
+        return "No runtime yet"
     return f"{name.title()}: {value}"
 
 
@@ -243,6 +247,7 @@ def stats(request, username):
             "all": link(status="watched"),
             "animated": link(style="animated", status="watched"),
             "live": link(style="live", status="watched"),
+            "no_runtime": link(runtime="missing", status="watched"),
             "decade": link(decade="DECADE"),
             "critics": link(critics="BAND"),
             "audience": link(audience="BAND"),

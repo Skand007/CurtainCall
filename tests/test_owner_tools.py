@@ -190,6 +190,7 @@ def library(owner):
             studios=["Regency"],
             rt_critics=88,
             imdb_rating=8.3,
+            runtime_minutes=170,
         ),
         make(
             "Collateral",
@@ -209,6 +210,7 @@ def library(owner):
             animated=True,
             rt_critics=96,
             imdb_rating=8.6,
+            runtime_minutes=125,
         ),
     ]
     for t in titles:
@@ -231,6 +233,7 @@ def library(owner):
         ("style=animated", {"Spirited Away"}),
         ("kind=anime", {"Spirited Away"}),  # old links still work
         ("genre=Crime&decade=2000", {"Collateral"}),
+        ("runtime=missing", {"Collateral"}),
     ],
 )
 def test_click_through_filters(client, library, query, expected):
@@ -254,6 +257,7 @@ def test_stats_link_to_filtered_library(client, owner, library):
     assert '/?director=Michael+Mann"' in page
     assert '/?studio=Studio+Ghibli"' in page
     assert '/?critics=80"' in page
+    assert "/?runtime=missing&amp;status=watched" in page
     assert ">Studios<" in page and "Anime studios" not in page
 
 
