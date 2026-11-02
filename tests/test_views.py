@@ -285,5 +285,22 @@ def test_library_cards_stay_simple(client, owner):
     Entry.objects.create(user=owner, title=heat, rating=4.5)
     page = client.get(reverse("home")).content.decode()
     assert "Recently watched" in page and "Highest rated" in page
-    assert "https://img/b.jpg" in page  # banner
+    assert 'class="curtain-call"' in page and "https://img/p.jpg" in page  # fanned poster stack
     assert "$187.4 million" not in page and "8.3" not in page
+
+
+def test_names_typed_in_capitals_are_shown_normally(db, django_user_model):
+    from tracker.views import display_name
+
+    shouty = django_user_model.objects.create_user("x1", first_name="SKAND", last_name="GUPTA")
+    lower = django_user_model.objects.create_user("skand")
+    mixed = django_user_model.objects.create_user("x2", first_name="Ronan", last_name="McDonald")
+    assert display_name(shouty) == "Skand Gupta"
+    assert display_name(lower) == "Skand"
+    assert display_name(mixed) == "Ronan McDonald"
+
+
+def test_homepage_heading_is_the_site_name_and_the_owner_is_in_the_top_bar(client, owner):
+    page = client.get(reverse("home")).content.decode()
+    assert "<h1>CurtainCall</h1>" in page
+    assert '<a class="brand" href="/">Skand Gupta</a>' in page

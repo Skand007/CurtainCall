@@ -84,7 +84,11 @@ def get_owner():
 
 
 def display_name(user):
-    return user.get_full_name() or user.username
+    """'SKAND GUPTA' or 'skand' -> 'Skand Gupta' / 'Skand'. Mixed-case names are left as typed."""
+    name = (user.get_full_name() or user.username).strip()
+    if name.isupper() or name.islower():
+        name = name.title()
+    return name
 
 
 def library_page(request, owner):
@@ -108,15 +112,7 @@ def library_page(request, owner):
 
     with_poster = watched.exclude(title__poster_url="").select_related("title")
     recent = list(with_poster.order_by(F("watched_on").desc(nulls_last=True), "-created_at")[:14])
-    # The banner uses the latest watched title that has a wide image.
-    banner = (
-        watched.exclude(title__backdrop_url="")
-        .select_related("title")
-        .order_by(F("watched_on").desc(nulls_last=True), "-created_at")
-        .first()
-    )
     context.update(
-        banner=banner,
         recent=recent,
         top_rated=list(with_poster.filter(rating__gte=4).order_by("-rating", "-watched_on", "title__name")[:14]),
     )
