@@ -1,0 +1,8 @@
+<form hx-post="{% url 'add_title' %}" hx-swap="outerHTML" class="add-form">
+  {% if undone %}<span class="muted">Undone.</span>{% endif %}
+  <input type="hidden" name="source" value="{{ r.source }}">
+  <input type="hidden" name="kind" value="{{ r.kind }}">
+  <input type="hidden" name="source_id" value="{{ r.source_id }}">
+  <button class="button" name="status" value="watched">Mark as watched</button>
+  <button class="button secondary" name="status" value="planned">Plan to watch</button>
+</form>

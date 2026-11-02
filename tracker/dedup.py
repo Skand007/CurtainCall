@@ -1,7 +1,7 @@
-"""Spot and merge the same title arriving from different sources (e.g. a Ghibli film in TMDB and AniList).
+"""Spot and merge the same title arriving from different sources (e.g. a Ghibli film in TMDB and MyAnimeList).
 
 Two titles count as the same when they share an IMDb or MyAnimeList id, or when their
-normalised names match and their years are at most one apart. TMDB and AniList share no
+normalised names match and their years are at most one apart. TMDB and MyAnimeList share no
 ids with each other, so between those two the name-and-year check does the work.
 """
 
@@ -113,10 +113,19 @@ def merge_titles(keep, drop):
     for field in COPY_IF_EMPTY:
         if not getattr(keep, field) and getattr(drop, field):
             setattr(keep, field, getattr(drop, field))
-    if not keep.cast and drop.cast:
-        keep.cast = drop.cast
+    for field in ["cast", "genres", "studios", "directors"]:
+        if not getattr(keep, field) and getattr(drop, field):
+            setattr(keep, field, getattr(drop, field))
     keep.save()
+    move_entries(drop, keep)
+    drop.delete()
+    return keep
 
+
+@transaction.atomic
+def move_entries(drop, keep):
+    """Move every library entry and import row from `drop` to `keep`, combining entries when a
+    person has both. Unlike merge_titles, nothing about the titles themselves is copied."""
     for entry in Entry.objects.filter(title=drop):
         existing = Entry.objects.filter(user=entry.user, title=keep).first()
         if existing is None:
@@ -132,10 +141,11 @@ def merge_titles(keep, drop):
             existing.status = Entry.STATUS_WATCHED
         existing.save()
         entry.delete()
-
     ImportRow.objects.filter(matched_title=drop).update(matched_title=keep)
-    drop.delete()
-    return keep
+    for row in ImportRow.objects.exclude(picked_title_ids=[]).only("picked_title_ids"):
+        if drop.pk in row.picked_title_ids:
+            row.picked_title_ids = list(dict.fromkeys(keep.pk if t == drop.pk else t for t in row.picked_title_ids))
+            row.save(update_fields=["picked_title_ids"])
 
 
 def fold_import_duplicate(title, user):

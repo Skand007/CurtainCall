@@ -41,27 +41,107 @@ def test_missing_release_date_gives_no_year():
     assert sources.tmdb_candidate(item, Title.KIND_TV)["year"] is None
 
 
-def test_anilist_media_is_parsed():
-    media = {
-        "id": 199,
-        "title": {"english": "Spirited Away", "romaji": "Sen to Chihiro no Kamikakushi"},
-        "synonyms": ["Chihiro"],
-        "format": "MOVIE",
-        "episodes": 1,
-        "duration": 125,
-        "seasonYear": 2001,
-        "genres": ["Adventure"],
-        "averageScore": 86,
-        "coverImage": {"large": "https://img/x.jpg"},
-        "studios": {"nodes": [{"name": "Studio Ghibli"}]},
-        "description": "A girl.<br>",
-    }
-    c = sources.anilist_candidate(media)
+JIKAN_ITEM = {
+    "mal_id": 199,
+    "title": "Sen to Chihiro no Kamikakushi",
+    "title_english": "Spirited Away",
+    "title_synonyms": ["Chihiro"],
+    "titles": [
+        {"type": "Default", "title": "Sen to Chihiro no Kamikakushi"},
+        {"type": "English", "title": "Spirited Away"},
+    ],
+    "type": "Movie",
+    "episodes": 1,
+    "duration": "2 hr 4 min",
+    "aired": {"from": "2001-07-20T00:00:00+00:00"},
+    "year": None,
+    "genres": [{"name": "Adventure"}, {"name": "Award Winning"}, {"name": "Sci-Fi"}],
+    "studios": [{"name": "Studio Ghibli"}],
+    "score": 8.77,
+    "images": {"jpg": {"large_image_url": "https://img/x.jpg"}},
+    "synopsis": "A girl. [Written by MAL Rewrite]",
+    "trailer": {"youtube_id": "ByXuk9QqQkk"},
+}
+
+
+def test_mal_item_is_parsed():
+    c = sources.mal_candidate(JIKAN_ITEM)
+    assert (c["source"], c["source_id"], c["kind"]) == ("mal", "199", "movie")
     assert c["name"] == "Spirited Away"
     assert c["original_name"] == "Sen to Chihiro no Kamikakushi"
-    assert c["score"] == 8.6
-    assert c["extra"]["runtime"] == 125
-    assert c["extra"]["studios"] == ["Studio Ghibli"]
+    assert c["year"] == 2001  # from the airing date when MyAnimeList has no season year
+    assert c["animated"] is True
+    assert c["score"] == 8.77
+    assert c["overview"] == "A girl."
+    extra = c["extra"]
+    assert extra["runtime"] == 124
+    assert extra["studios"] == ["Studio Ghibli"]
+    assert extra["genres"] == ["Adventure", "Science Fiction"]  # same spelling as TMDB, no award label
+    assert extra["synonyms"] == ["Chihiro"]
+    assert extra["release_date"] == "2001-07-20"
+    assert extra["trailer_key"] == "ByXuk9QqQkk"
+    assert extra["cast"] is None
+
+
+def test_mal_types_become_films_or_series():
+    assert sources.mal_kind("Movie", 1) == "movie"
+    assert sources.mal_kind("TV", 12) == "tv"
+    assert sources.mal_kind("TV", None) == "tv"
+    assert sources.mal_kind("OVA", 1) == "movie"
+    assert sources.mal_kind("CM", 3) == "tv"
+    assert sources.mal_kind("ONA", None) == "tv"
+
+
+def test_trailer_id_from_embed_link():
+    assert (
+        sources.youtube_id({"youtube_id": None, "embed_url": "https://www.youtube.com/embed/abc123?enablejsapi=1"})
+        == "abc123"
+    )
+    assert sources.youtube_id(None) == ""
+
+
+def test_duration_parsing():
+    assert sources.parse_duration("24 min per ep") == 24
+    assert sources.parse_duration("1 hr 55 min") == 115
+    assert sources.parse_duration("1 hr") == 60
+    assert sources.parse_duration("30 sec per ep") == 1
+    assert sources.parse_duration("Unknown") is None
+
+
+def test_genres_get_one_spelling():
+    assert sources.clean_genres(["Action & Adventure", "Action", "Sci-Fi & Fantasy", "Suspense"]) == [
+        "Action",
+        "Adventure",
+        "Science Fiction",
+        "Fantasy",
+        "Thriller",
+    ]
+
+
+def test_lead_studios_keep_the_first_and_major_studios_only():
+    companies = [
+        {"name": "Legendary Pictures"},
+        {"name": "Some Finance Partners"},
+        {"name": "Warner Bros. Pictures"},
+        {"name": "Village Roadshow"},
+    ]
+    assert sources.lead_studios(companies) == ["Legendary Pictures", "Warner Bros. Pictures"]
+    assert sources.lead_studios([{"name": "Tiny Films"}, {"name": "Another"}]) == ["Tiny Films"]
+    assert sources.lead_studios([]) == []
+
+
+def test_jikan_rate_limit_raises_after_one_retry(monkeypatch):
+    monkeypatch.setattr(sources.time, "sleep", lambda s: None)
+    calls = []
+
+    def get(*a, **k):
+        calls.append(1)
+        return FakeResponse({}, 429)
+
+    monkeypatch.setattr(sources.session, "get", get)
+    with pytest.raises(sources.RateLimited):
+        sources.jikan_get("/anime", {"q": "x"})
+    assert len(calls) == 2
 
 
 def test_tmdb_without_token_raises(settings):
@@ -92,7 +172,7 @@ def test_search_tmdb_ranks_year_matches_first(settings, monkeypatch):
 
 @pytest.mark.django_db
 def test_upsert_is_idempotent_and_updates():
-    c = sources.anilist_candidate({"id": 5, "title": {"romaji": "Akira"}, "seasonYear": 1988})
+    c = sources.mal_candidate({"mal_id": 47, "title": "Akira", "year": 1988, "type": "Movie", "episodes": 1})
     first = sources.upsert_title(c)
     c["name"] = "AKIRA"
     second = sources.upsert_title(c)

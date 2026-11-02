@@ -1,0 +1,4 @@
+<span class="added-line">
+  <a class="added" href="{% url 'title' entry.title_id %}">{% if created %}Added to {{ label }}{% else %}Already in your library{% endif %}</a>
+  {% if created %}<button class="link" hx-post="{% url 'undo_add' entry.pk %}" hx-target="closest .added-line" hx-swap="outerHTML">Undo</button>{% endif %}
+</span>

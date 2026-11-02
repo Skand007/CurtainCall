@@ -1,0 +1,11 @@
+<ul class="outcomes">
+  {% for o in outcomes %}
+    <li>
+      {% if o.error %}<span class="muted">Could not reach the service for one result. Try it again.</span>
+      {% elif o.twin %}<span class="muted">Already in your library as</span> <a href="{% url 'title' o.twin.pk %}">{{ o.twin }}</a>
+      {% else %}{% include "tracker/_added.html" with entry=o.entry created=o.created %}<span class="muted">{{ o.entry.title }}</span>{% endif %}
+    </li>
+  {% empty %}
+    <li class="muted">Tick at least one result first.</li>
+  {% endfor %}
+</ul>

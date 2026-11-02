@@ -12,9 +12,10 @@ pytestmark = pytest.mark.django_db
 def ghibli_pair(user):
     tmdb = Title.objects.create(source="tmdb", source_id="129", kind="movie", name="Spirited Away", year=2001)
     ani = Title.objects.create(
-        source="anilist",
+        source="mal",
         source_id="199",
-        kind="anime",
+        kind="movie",
+        animated=True,
         name="Spirited Away",
         original_name="Sen to Chihiro no Kamikakushi",
         year=2001,
@@ -25,8 +26,8 @@ def ghibli_pair(user):
 
 def test_same_name_and_year_across_sources_is_a_duplicate(user):
     tmdb, ani = ghibli_pair(user)
-    assert dedup.find_duplicate("anilist", "199", "Spirited Away", year=2001) == tmdb
-    assert dedup.find_duplicate("anilist", "199", "Spirited Away", year=1980) is None  # a remake decades apart is not
+    assert dedup.find_duplicate("mal", "199", "Spirited Away", year=2001) == tmdb
+    assert dedup.find_duplicate("mal", "199", "Spirited Away", year=1980) is None  # a remake decades apart is not
 
 
 def test_shared_imdb_id_is_a_duplicate(user):
@@ -66,14 +67,14 @@ def test_likely_pairs_page_and_merge(client_in, user):
 def test_adding_a_twin_asks_first(client_in, user, fake_sources):
     tmdb = Title.objects.create(source="tmdb", source_id="900", kind="movie", name="Spirited Away", year=2001)
     Entry.objects.create(user=user, title=tmdb)
-    form = {"source": "anilist", "kind": "anime", "source_id": "199", "status": "watched"}
+    form = {"source": "mal", "kind": "movie", "source_id": "199", "status": "watched"}
 
     prompt = client_in.post(reverse("add_title"), form)
     assert b"Is this the same title?" in prompt.content
-    assert not Title.objects.filter(source="anilist").exists()
+    assert not Title.objects.filter(source="mal").exists()
 
     same = client_in.post(reverse("add_title"), {**form, "use_title": tmdb.pk})
-    assert b"Added to Watched" in same.content
+    assert b"Already in your library" in same.content
     assert Entry.objects.filter(user=user).count() == 1
 
     separate = client_in.post(reverse("add_title"), {**form, "confirm": "1"})

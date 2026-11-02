@@ -1,0 +1,35 @@
+{% extends "tracker/base.html" %}
+{% block title %}Re-match {{ title.name }} · CurtainCall{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <h1>Re-match “{{ title.name }}”</h1>
+  <a href="{% url 'title' title.pk %}">Back to the title</a>
+</div>
+<p class="muted" style="max-width:65ch">Now matched to {{ title }} from {{ title.get_source_display }}. Pick the right one below; your rating, status, dates and notes move across with it.</p>
+<form method="get" class="filters" role="search">
+  <label class="visually-hidden" for="rq">Search for</label>
+  <input id="rq" type="search" name="q" value="{{ query }}" style="margin-left:0;max-width:none">
+  <button class="button">Search</button>
+</form>
+{% if error %}<p class="error">The search services didn't respond. Try again in a moment.</p>{% endif %}
+{% if query and not results and not error %}<p class="muted">Nothing found for “{{ query }}”. Try a shorter title.</p>{% endif %}
+<ul class="results">
+  {% for r in results %}
+    <li class="result">
+      {% if r.poster_url %}<img src="{{ r.poster_url }}" alt="" loading="lazy">{% else %}<div class="noposter small"></div>{% endif %}
+      <div class="result-body">
+        <strong>{{ r.name }}</strong> <span class="muted">{{ r.year|default:"" }}, {% if r.kind == "movie" %}film{% else %}series{% endif %}{% if r.extra.format %} ({{ r.extra.format }}){% endif %} from {% if r.source == "mal" %}MyAnimeList{% else %}TMDB{% endif %}</span>
+        {% if r.original_name and r.original_name != r.name %}<div class="muted">{{ r.original_name }}</div>{% endif %}
+        <p class="clamp">{{ r.overview|striptags|truncatechars:200 }}</p>
+      </div>
+      <form method="post" class="result-actions">
+        {% csrf_token %}
+        <input type="hidden" name="source" value="{{ r.source }}">
+        <input type="hidden" name="kind" value="{{ r.kind }}">
+        <input type="hidden" name="source_id" value="{{ r.source_id }}">
+        <button class="button">Use this one</button>
+      </form>
+    </li>
+  {% endfor %}
+</ul>
+{% endblock %}

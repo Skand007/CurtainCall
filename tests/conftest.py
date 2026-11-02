@@ -25,7 +25,7 @@ def cand(name, year, source="tmdb", source_id=None, kind="movie", original="", s
             "episodes": 1,
             "runtime": 100,
         }
-        if source == "anilist"
+        if source == "mal"
         else {},
     }
 
@@ -60,13 +60,13 @@ def fake_sources(monkeypatch):
             cand("Cars", 2006, source_id="920", animated=True),
         ],
         "tv": [cand("Fargo", 2014, source_id="60622", kind="tv")],
-        "anilist": [
+        "mal": [
             cand(
                 "Spirited Away",
                 2001,
-                source="anilist",
+                source="mal",
                 source_id="199",
-                kind="anime",
+                kind="movie",
                 original="Sen to Chihiro no Kamikakushi",
                 animated=True,
             ),
@@ -82,12 +82,12 @@ def fake_sources(monkeypatch):
         calls.append(("tmdb", kind, query))
         return [dict(c) for c in find(catalogue[kind], query)][:limit]
 
-    def search_anilist(query, limit=8):
-        calls.append(("anilist", query))
-        return [dict(c) for c in find(catalogue["anilist"], query)][:limit]
+    def search_mal(query, limit=8):
+        calls.append(("mal", query))
+        return [dict(c) for c in find(catalogue["mal"], query)][:limit]
 
     def get_candidate(source, kind, source_id):
-        pool = catalogue["anilist"] if source == "anilist" else catalogue[kind]
+        pool = catalogue["mal"] if source == "mal" else catalogue[kind]
         for c in pool:
             if c["source_id"] == source_id:
                 return dict(c)
@@ -102,8 +102,8 @@ def fake_sources(monkeypatch):
         return title
 
     monkeypatch.setattr(sources, "search_tmdb", search_tmdb)
-    monkeypatch.setattr(sources, "search_anilist", search_anilist)
+    monkeypatch.setattr(sources, "search_mal", search_mal)
     monkeypatch.setattr(sources, "get_candidate", get_candidate)
-    monkeypatch.setattr(sources, "get_anilist", lambda source_id: get_candidate("anilist", "anime", source_id))
+    monkeypatch.setattr(sources, "get_mal", lambda source_id: get_candidate("mal", "movie", source_id))
     monkeypatch.setattr(sources, "fetch_tmdb_details", fetch_tmdb_details)
     return calls

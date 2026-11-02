@@ -5,13 +5,14 @@
 <form class="filters" hx-get="{% url 'search' %}" hx-target="#results" hx-push-url="true" hx-indicator="#results"
       hx-trigger="submit, change, input from:#sq delay:400ms" role="search">
   <div class="segmented" role="radiogroup" aria-label="Search in">
-    <label><input type="radio" name="source" value="movie" {% if source == "movie" %}checked{% endif %}><span>Films</span></label>
-    <label><input type="radio" name="source" value="tv" {% if source == "tv" %}checked{% endif %}><span>Series</span></label>
-    <label><input type="radio" name="source" value="anime" {% if source == "anime" %}checked{% endif %}><span>Anime</span></label>
+    {% for value, label in sources %}
+      <label><input type="radio" name="source" value="{{ value }}" {% if source == value %}checked{% endif %}><span>{{ label }}</span></label>
+    {% endfor %}
   </div>
   <label class="visually-hidden" for="sq">Title</label>
   <input id="sq" type="search" name="q" value="{{ query }}" placeholder="Search by title" autofocus autocomplete="off" style="margin-left:0;max-width:none">
   <button class="button">Search</button>
 </form>
+<p class="muted small">Films and Series search TMDB; MyAnimeList has Japanese animation, including shorts and specials. Tick several results to add them together.</p>
 <div id="results">{% include "tracker/_search_results.html" %}</div>
 {% endblock %}

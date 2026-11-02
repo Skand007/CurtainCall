@@ -5,6 +5,7 @@ from collections import Counter
 from .models import Entry, Title
 
 SCORE_BANDS = [f"{low}–{low + 9}" for low in range(0, 90, 10)] + ["90–100"]
+BAND_STARTS = list(range(0, 100, 10))  # the value used in ?critics= / ?audience= links
 
 
 def band_counts(scores):
@@ -15,24 +16,34 @@ def band_counts(scores):
     return counts
 
 
+def band_of(score):
+    """The start of a score's 10-point band: 87 -> 80, 100 -> 90."""
+    return min(int(score) // 10, 9) * 10
+
+
+def audience_score(title):
+    """IMDb users' 0-10 rating on the same 0-100 scale as Rotten Tomatoes."""
+    return round(title.imdb_rating * 10) if title.imdb_rating is not None else None
+
+
 def library_stats(user):
     entries = list(Entry.objects.filter(user=user, status=Entry.STATUS_WATCHED).select_related("title"))
     titles = [e.title for e in entries]
 
     by_kind = Counter(t.get_kind_display() for t in titles)
-    animated = sum(1 for t in titles if t.animated or t.kind == Title.KIND_ANIME)
+    animated = sum(1 for t in titles if t.animated)
     minutes = sum(t.runtime_minutes or 0 for t in titles)
 
     decades = Counter((t.year // 10) * 10 for t in titles if t.year)
-    decade_labels = sorted(decades)
+    decade_starts = sorted(decades)
 
     genres = Counter(g for t in titles for g in t.genres)
     directors = Counter(d for t in titles if t.kind == Title.KIND_MOVIE for d in t.directors)
-    studios = Counter(d for t in titles if t.kind == Title.KIND_ANIME for d in t.directors)
+    studios = Counter(s for t in titles for s in t.studios)
 
     # Critics (Rotten Tomatoes, 0-100) against audiences (IMDb users, 0-10 scaled to 0-100), in 10-point bands.
     critics = [t.rt_critics for t in titles if t.rt_critics is not None]
-    audience = [round(t.imdb_rating * 10) for t in titles if t.imdb_rating is not None]
+    audience = [a for a in (audience_score(t) for t in titles) if a is not None]
 
     return {
         "total": len(titles),
@@ -41,12 +52,17 @@ def library_stats(user):
         "live_action": len(titles) - animated,
         "hours": round(minutes / 60),
         "missing_runtime": sum(1 for t in titles if not t.runtime_minutes),
-        "decades": {"labels": [f"{d}s" for d in decade_labels], "values": [decades[d] for d in decade_labels]},
+        "decades": {
+            "labels": [f"{d}s" for d in decade_starts],
+            "values": [decades[d] for d in decade_starts],
+            "keys": decade_starts,
+        },
         "genres": genres.most_common(12),
         "directors": directors.most_common(10),
         "studios": studios.most_common(10),
         "scores": {
             "labels": SCORE_BANDS,
+            "keys": BAND_STARTS,
             "critics": band_counts(critics),
             "audience": band_counts(audience),
             "critics_n": len(critics),

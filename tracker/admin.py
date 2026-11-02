@@ -5,7 +5,7 @@ from .models import Entry, ImportBatch, ImportRow, Title
 
 @admin.register(Title)
 class TitleAdmin(admin.ModelAdmin):
-    list_display = ["name", "year", "kind", "source", "source_id", "details_fetched"]
+    list_display = ["name", "year", "kind", "animated", "source", "source_id", "details_fetched"]
     list_filter = ["kind", "source", "animated", "details_fetched"]
     search_fields = ["name", "original_name"]
 

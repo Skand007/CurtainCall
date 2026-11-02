@@ -8,10 +8,20 @@
 {% include "tracker/_import_progress.html" %}
 
 {% if review_rows %}
-  <h2>Needs a decision ({{ review_rows|length }})</h2>
-  <p class="muted">Pick the right match, search again with a corrected title or year, or skip it.</p>
+  <div class="section-head">
+    <h2>Needs a decision ({{ review_rows|length }})</h2>
+    <a class="button secondary small" href="{% url 'import_unmatched' batch.pk %}">Download these as CSV</a>
+  </div>
+  <p class="muted">Tick the right match (several if the row covers more than one title), search again with a corrected title or year, or skip it. Every decision can be undone.</p>
   {% for row in review_rows %}{% include "tracker/_review_row.html" %}{% endfor %}
 {% elif not progress.pending %}
   <p>Everything in this file is settled. <a href="{% url 'home' %}">Open your library</a></p>
+{% endif %}
+
+{% if settled_rows %}
+  <details class="settled-list">
+    <summary>Matched and skipped rows ({{ settled_rows|length }}): check or undo a decision</summary>
+    <ul>{% for row in settled_rows %}{% include "tracker/_settled_row.html" %}{% endfor %}</ul>
+  </details>
 {% endif %}
 {% endblock %}

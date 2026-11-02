@@ -1,11 +1,20 @@
 {% if error %}<p class="error">{{ error }}</p>{% endif %}
 {% if query and not results and not error %}<p class="muted">Nothing found for “{{ query }}”. Check the spelling, or try the other tabs.</p>{% endif %}
+{% if results %}
+<form id="many" hx-post="{% url 'add_many' %}" hx-target="#many-outcome" hx-swap="innerHTML" class="many-bar">
+  <span class="muted"><strong id="many-count">0</strong> ticked</span>
+  <button class="button" name="status" value="watched">Add ticked as watched</button>
+  <button class="button secondary" name="status" value="planned">Add ticked to plan</button>
+</form>
+<div id="many-outcome" aria-live="polite"></div>
+{% endif %}
 <ul class="results">
   {% for r in results %}
-    <li class="result">
+    <li class="result tickable">
+      {% if r.owned %}<span class="tick-space"></span>{% else %}<input class="tick" type="checkbox" form="many" name="pick" value="{{ r.ref }}" aria-label="Tick {{ r.name }}">{% endif %}
       {% if r.poster_url %}<img src="{{ r.poster_url }}" alt="" loading="lazy">{% else %}<div class="noposter small"></div>{% endif %}
       <div class="result-body">
-        <strong>{{ r.name }}</strong> <span class="muted">{{ r.year|default:"" }}</span>
+        <strong>{{ r.name }}</strong> <span class="muted">{{ r.year|default:"" }}{% if r.extra.format %}, {{ r.extra.format }}{% endif %}</span>
         {% if r.original_name and r.original_name != r.name %}<div class="muted">{{ r.original_name }}</div>{% endif %}
         <p class="clamp">{{ r.overview|striptags|truncatechars:220 }}</p>
       </div>
@@ -13,15 +22,15 @@
         {% if r.owned %}
           <span class="added">In your library</span>
         {% else %}
-          <form hx-post="{% url 'add_title' %}" hx-swap="outerHTML">
-            <input type="hidden" name="source" value="{{ r.source }}">
-            <input type="hidden" name="kind" value="{{ r.kind }}">
-            <input type="hidden" name="source_id" value="{{ r.source_id }}">
-            <button class="button" name="status" value="watched">Mark as watched</button>
-            <button class="button secondary" name="status" value="planned">Plan to watch</button>
-          </form>
+          {% include "tracker/_add_form.html" %}
         {% endif %}
       </div>
     </li>
   {% endfor %}
 </ul>
+<script>
+  (function () {
+    function update() { var n = document.getElementById("many-count"); if (n) n.textContent = document.querySelectorAll("input[form=many]:checked").length; }
+    document.addEventListener("change", function (e) { if (e.target.matches("input[form=many]")) update(); });
+  })();
+</script>

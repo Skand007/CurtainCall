@@ -25,8 +25,18 @@ def run_checks():
     bad_year = Title.objects.filter(Q(year__lt=1880) | Q(year__gt=this_year + 3))
     results.append(("release years plausible", bad_year.count(), list(bad_year.values_list("name", "year")[:3])))
 
-    bad_kind = Title.objects.filter(source=Title.SOURCE_ANILIST).exclude(kind=Title.KIND_ANIME)
-    results.append(("AniList titles are anime", bad_kind.count(), list(bad_kind.values_list("name", flat=True)[:3])))
+    bad_kind = Title.objects.exclude(kind__in=[Title.KIND_MOVIE, Title.KIND_TV])
+    results.append(("titles are films or series", bad_kind.count(), list(bad_kind.values_list("name", flat=True)[:3])))
+
+    no_type = Title.objects.filter(source=Title.SOURCE_TMDB).exclude(tmdb_type__in=[Title.KIND_MOVIE, Title.KIND_TV])
+    results.append(
+        ("TMDB titles know their TMDB type", no_type.count(), list(no_type.values_list("name", flat=True)[:3]))
+    )
+
+    live = [
+        t.name for t in Title.objects.filter(source=Title.SOURCE_MAL, animated=False) if not t.is_locked("animated")
+    ]
+    results.append(("MyAnimeList titles are animated", len(live), live[:3]))
 
     bad_rating = Entry.objects.exclude(rating__isnull=True).filter(Q(rating__lt=0.5) | Q(rating__gt=5))
     results.append(("ratings between 0.5 and 5", bad_rating.count(), list(bad_rating.values_list("pk", flat=True)[:3])))

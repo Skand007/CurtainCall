@@ -14,11 +14,11 @@
 
       <p class="facts-line">
         {% if title.release_date %}<span><time datetime="{{ title.release_date|date:'Y-m-d' }}">{{ title.release_date|date:"j F Y" }}</time></span>{% elif title.year %}<span>{{ title.year }}</span>{% endif %}
-        <span>{{ title.get_kind_display }}</span>
+        <span>{{ title.get_kind_display }}, {% if title.animated %}animated{% else %}live action{% endif %}</span>
         {% if title.runtime_minutes %}<span>{% if title.kind == "movie" %}{{ title.runtime_minutes|hours_minutes }}{% else %}{{ title.runtime_minutes|hours_minutes }} in total{% if title.episodes and title.episodes > 1 %}, {{ title.episodes }} episodes{% endif %}{% endif %}</span>{% endif %}
       </p>
 
-      {% if title.imdb_rating or title.rt_critics is not None or title.source == "anilist" and title.external_score %}
+      {% if title.imdb_rating or title.rt_critics is not None or title.source != "tmdb" and title.external_score %}
         <ul class="scores" aria-label="Scores">
           {% if title.imdb_rating %}
             <li><span class="score-value">{{ title.imdb_rating|floatformat:1 }}</span><span class="score-label">IMDb{% if title.imdb_votes %}<br><span class="muted">{{ title.imdb_votes|short_count }} votes</span>{% endif %}</span></li>
@@ -26,21 +26,25 @@
           {% if title.rt_critics is not None %}
             <li><span class="score-value">{{ title.rt_critics }}%</span><span class="score-label">Rotten Tomatoes<br><span class="muted">critics</span></span></li>
           {% endif %}
-          {% if not title.imdb_rating and title.source == "anilist" and title.external_score %}
-            <li><span class="score-value">{{ title.external_score|floatformat:1 }}</span><span class="score-label">AniList<br><span class="muted">users</span></span></li>
+          {% if not title.imdb_rating and title.source != "tmdb" and title.external_score %}
+            <li><span class="score-value">{{ title.external_score|floatformat:1 }}</span><span class="score-label">{{ title.get_source_display }}<br><span class="muted">users</span></span></li>
           {% endif %}
         </ul>
       {% endif %}
 
       {% if title.genres %}
-        <ul class="chips" aria-label="Genres">{% for g in title.genres %}<li>{{ g }}</li>{% endfor %}</ul>
+        <ul class="chips" aria-label="Genres">{% for g, href in genre_links %}<li><a href="{{ href }}">{{ g }}</a></li>{% empty %}{% for g in title.genres %}<li>{{ g }}</li>{% endfor %}{% endfor %}</ul>
       {% endif %}
 
-      {% if title.directors or title.box_office_usd %}
+      {% if title.directors or title.studios or title.box_office_usd %}
         <dl class="facts">
           {% if title.directors %}
-            <dt>{% if title.kind == "movie" %}Directed by{% elif title.kind == "anime" %}Studio{% else %}Created by{% endif %}</dt>
-            <dd>{{ title.directors|join:", " }}</dd>
+            <dt>{% if title.tmdb_type == "tv" %}Created by{% else %}Directed by{% endif %}</dt>
+            <dd>{% for d, href in director_links %}<a href="{{ href }}">{{ d }}</a>{% if not forloop.last %}, {% endif %}{% empty %}{{ title.directors|join:", " }}{% endfor %}</dd>
+          {% endif %}
+          {% if title.studios %}
+            <dt>Studio{{ title.studios|length|pluralize }}</dt>
+            <dd>{% for st, href in studio_links %}<a href="{{ href }}">{{ st }}</a>{% if not forloop.last %}, {% endif %}{% empty %}{{ title.studios|join:", " }}{% endfor %}</dd>
           {% endif %}
           {% if title.box_office_usd %}
             <dt>Box office</dt>
@@ -112,18 +116,43 @@
           {% endif %}
         </section>
       {% endif %}
+
+      {% if can_edit %}
+        <details class="take owner-edit"{% if title.source == "anilist" %} open{% endif %}>
+          <summary>Edit how this title is shown</summary>
+          {% if title.source == "anilist" %}<p class="muted small">This title came from AniList, which the site no longer uses. Re-match it to keep its details up to date.</p>{% endif %}
+          <form method="post" action="{% url 'edit_title' title.pk %}" class="edit">
+            {% csrf_token %}
+            <label>Type
+              <select name="kind">{% for value, label in kind_choices %}<option value="{{ value }}" {% if title.kind == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+            </label>
+            <label>Style
+              <select name="style">
+                <option value="animated" {% if title.animated %}selected{% endif %}>Animated</option>
+                <option value="live" {% if not title.animated %}selected{% endif %}>Live action</option>
+              </select>
+            </label>
+            <label class="wide">Studios <input name="studios" value="{{ title.studios|join:', ' }}" placeholder="Separate several with commas"></label>
+            <div class="take-actions wide">
+              <button class="button">Save</button>
+              <a href="{% url 'rematch' title.pk %}">Wrong title? Re-match it</a>
+              {% if title.locked %}<span class="muted small">Set by hand: {{ title.locked|join:", " }}</span>{% endif %}
+            </div>
+          </form>
+        </details>
+      {% endif %}
     </div>
   </div>
 
   {% if title.cast %}
   <section class="shelf cast" aria-labelledby="cast-h">
-    <h2 id="cast-h">{% if title.kind == "anime" %}Main characters{% else %}Cast{% endif %}</h2>
+    <h2 id="cast-h">{% if title.source != "tmdb" %}Main characters{% else %}Cast{% endif %}</h2>
     <ul class="shelf-row">
       {% for person in title.cast %}
         <li class="person">
           {% if person.photo %}<img src="{{ person.photo }}" alt="" loading="lazy" width="96" height="96">{% else %}<span class="person-blank" aria-hidden="true">{{ person.name|slice:":1" }}</span>{% endif %}
-          <span class="person-name">{% if title.kind == "anime" %}{{ person.character }}{% else %}{{ person.name }}{% endif %}</span>
-          {% if title.kind == "anime" %}{% if person.name != person.character %}<span class="person-role">voiced by {{ person.name }}</span>{% endif %}{% elif person.character %}<span class="person-role">{{ person.character }}</span>{% endif %}
+          <span class="person-name">{% if title.source != "tmdb" %}{{ person.character }}{% else %}{{ person.name }}{% endif %}</span>
+          {% if title.source != "tmdb" %}{% if person.name != person.character %}<span class="person-role">voiced by {{ person.name }}</span>{% endif %}{% elif person.character %}<span class="person-role">{{ person.character }}</span>{% endif %}
         </li>
       {% endfor %}
     </ul>

@@ -1,0 +1,13 @@
+<div {% if keep_going %}hx-post="{% url 'refresh_run' %}" hx-trigger="load delay:{{ delay }}" hx-target="#refresh-progress" hx-swap="innerHTML"{% endif %}>
+  <p>{{ result.details_done }} updated in this step. <strong>{{ result.details_left }}</strong> still waiting.</p>
+  {% if keep_going and delay != "300ms" %}
+    <p class="muted">Pausing for MyAnimeList's limit of 60 requests a minute; carrying on in a few seconds.</p>
+  {% elif keep_going %}
+    <p class="muted">Working… keep this page open.</p>
+  {% elif result.details_left %}
+    <p class="error">{% if result.stopped and result.stopped != "time" %}Paused: {{ result.stopped }}.{% else %}Stopped.{% endif %} Try again in a minute.</p>
+    <button class="button" hx-post="{% url 'refresh_run' %}" hx-target="#refresh-progress" hx-swap="innerHTML">Continue</button>
+  {% else %}
+    <p class="added">All titles are up to date.</p>
+  {% endif %}
+</div>

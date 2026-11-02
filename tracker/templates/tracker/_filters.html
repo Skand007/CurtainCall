@@ -12,6 +12,13 @@
       <option value="{{ value }}" {% if params.style == value %}selected{% endif %}>{{ label }}</option>
     {% endfor %}
   </select>
+  <label class="visually-hidden" for="genre">Genre</label>
+  <select id="genre" name="genre">
+    <option value="">Any genre</option>
+    {% for g in genre_choices %}
+      <option value="{{ g }}" {% if params.genre == g %}selected{% endif %}>{{ g }}</option>
+    {% endfor %}
+  </select>
   <label class="visually-hidden" for="status">Status</label>
   <select id="status" name="status">
     <option value="">Any status</option>
@@ -28,4 +35,11 @@
   </select>
   <label class="visually-hidden" for="q">Search the library</label>
   <input id="q" type="search" name="q" placeholder="Search the library" value="{{ params.q|default:'' }}" autocomplete="off">
+  {% for name, value in hidden_facets %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
+  {% if selecting %}<input type="hidden" name="select" value="1">{% endif %}
 </form>
+{% if chips %}
+  <ul class="chips active-filters" aria-label="Filters from links">
+    {% for chip in chips %}<li><span>{{ chip.label }}</span><a href="{{ chip.clear }}#library" aria-label="Remove filter {{ chip.label }}">×</a></li>{% endfor %}
+  </ul>
+{% endif %}

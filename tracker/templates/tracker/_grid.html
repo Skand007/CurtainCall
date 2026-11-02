@@ -3,8 +3,9 @@
   {% if page.object_list %}
   <div class="grid">
     {% for e in page %}
-      <a class="poster" href="{% url 'title' e.title.pk %}">
+      {% if selecting %}<label class="poster pick-card">{% else %}<a class="poster" href="{% url 'title' e.title.pk %}">{% endif %}
         <span class="art">
+          {% if selecting %}<input type="checkbox" form="bulk" name="title" value="{{ e.title.pk }}" aria-label="Select {{ e.title.name }}">{% endif %}
           {% if e.title.poster_url %}
             <img src="{{ e.title.poster_url }}" alt="" loading="lazy" width="148" height="222">
           {% else %}
@@ -15,14 +16,15 @@
           <span class="name">{{ e.title.name }}</span>
           <span class="meta">
             <span>{% if e.status != "watched" %}{{ e.get_status_display }}{% else %}{{ e.title.year|default:"" }}{% endif %}</span>
-            {% if e.rating %}<span class="stars" aria-label="Rated {{ e.rating }} out of 5">{{ e.rating|stars }}</span>{% endif %}
+            {% if selecting %}<span class="muted">{{ e.title.get_kind_display }}, {% if e.title.animated %}animated{% else %}live action{% endif %}</span>
+            {% elif e.rating %}<span class="stars" aria-label="Rated {{ e.rating }} out of 5">{{ e.rating|stars }}</span>{% endif %}
           </span>
         </span>
-      </a>
+      {% if selecting %}</label>{% else %}</a>{% endif %}
     {% endfor %}
   </div>
   {% else %}
-    <p class="empty">No titles match these filters. Try another type or clear the search.</p>
+    <p class="empty">No titles match these filters. Try another type, clear the search or remove a filter above.</p>
   {% endif %}
   {% if page.has_other_pages %}
     <nav class="pager" aria-label="Pages">

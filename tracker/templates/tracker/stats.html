@@ -3,19 +3,20 @@
 {% block title %}{{ owner_name }}'s stats · CurtainCall{% endblock %}
 {% block head %}<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>{% endblock %}
 {% block content %}
-<p class="stats-lede">{{ owner_name }} has watched {{ stats.total|intcomma }} title{{ stats.total|pluralize }}, about {{ stats.hours|default:0|intcomma }} hours.</p>
+<p class="stats-lede">{{ owner_name }} has watched <a href="{{ links.all }}">{{ stats.total|intcomma }} title{{ stats.total|pluralize }}</a>, about {{ stats.hours|default:0|intcomma }} hours.</p>
 <p class="stats-sub">
-  {{ stats.live_action|intcomma }} live-action and {{ stats.animated|intcomma }} animated.
+  <a href="{{ links.live }}">{{ stats.live_action|intcomma }} live action</a> and <a href="{{ links.animated }}">{{ stats.animated|intcomma }} animated</a>.
   {% if stats.missing_runtime %}{{ stats.missing_runtime|intcomma }} title{{ stats.missing_runtime|pluralize }} {{ stats.missing_runtime|pluralize:'has,have' }} no runtime yet, so the hours are a lower bound.{% endif %}
 </p>
 
 <div class="charts">
   <section class="card">
     <h2>Titles by release decade</h2>
+    <p class="muted small chart-note">Click a bar to see those titles.</p>
     <div class="chart-box"><canvas id="decades" role="img" aria-label="Bar chart of watched titles by release decade"></canvas></div>
     <details class="as-table">
       <summary>Show as a table</summary>
-      <table><tbody>{% for label, value in decade_rows %}<tr><th scope="row">{{ label }}</th><td>{{ value }}</td></tr>{% endfor %}</tbody></table>
+      <table><tbody>{% for label, value, href in decade_rows %}<tr><th scope="row"><a href="{{ href }}">{{ label }}</a></th><td>{{ value }}</td></tr>{% endfor %}</tbody></table>
     </details>
   </section>
   <section class="card">
@@ -27,6 +28,7 @@
       {% else %}
         Scores appear once the nightly refresh has fetched them.
       {% endif %}
+      Click a bar to see those titles.
     </p>
     <ul class="legend" aria-hidden="true">
       <li><span class="swatch critics"></span>Critics (Rotten Tomatoes)</li>
@@ -37,7 +39,7 @@
       <summary>Show as a table</summary>
       <table>
         <thead><tr><th>Score</th><th>Critics</th><th>Audience</th></tr></thead>
-        <tbody>{% for label, critics, audience in score_rows %}<tr><th scope="row">{{ label }}</th><td>{{ critics }}</td><td>{{ audience }}</td></tr>{% endfor %}</tbody>
+        <tbody>{% for label, critics, audience, critics_href, audience_href in score_rows %}<tr><th scope="row">{{ label }}</th><td><a href="{{ critics_href }}">{{ critics }}</a></td><td><a href="{{ audience_href }}">{{ audience }}</a></td></tr>{% endfor %}</tbody>
       </table>
     </details>
   </section>
@@ -46,20 +48,21 @@
 <div class="charts">
   <section class="card">
     <h2>Top genres</h2>
-    <ol class="ranked">{% for name, n in stats.genres %}<li><span>{{ name }}</span><span class="n">{{ n }}</span></li>{% empty %}<li class="muted">Genres appear once titles have details.</li>{% endfor %}</ol>
+    <ol class="ranked">{% for name, n, href in genre_rows %}<li><a href="{{ href }}">{{ name }}</a><span class="n">{{ n }}</span></li>{% empty %}<li class="muted">Genres appear once titles have details.</li>{% endfor %}</ol>
   </section>
   <section class="card">
     <h2>Most-watched directors</h2>
-    <ol class="ranked">{% for name, n in stats.directors %}<li><span>{{ name }}</span><span class="n">{{ n }}</span></li>{% empty %}<li class="muted">Directors appear once films have details.</li>{% endfor %}</ol>
+    <ol class="ranked">{% for name, n, href in director_rows %}<li><a href="{{ href }}">{{ name }}</a><span class="n">{{ n }}</span></li>{% empty %}<li class="muted">Directors appear once films have details.</li>{% endfor %}</ol>
   </section>
   <section class="card">
-    <h2>Anime studios</h2>
-    <ol class="ranked">{% for name, n in stats.studios %}<li><span>{{ name }}</span><span class="n">{{ n }}</span></li>{% empty %}<li class="muted">Studios appear once anime is added.</li>{% endfor %}</ol>
+    <h2>Studios</h2>
+    <ol class="ranked">{% for name, n, href in studio_rows %}<li><a href="{{ href }}">{{ name }}</a><span class="n">{{ n }}</span></li>{% empty %}<li class="muted">Studios appear once titles have details.</li>{% endfor %}</ol>
   </section>
 </div>
 
 {{ stats.decades|json_script:"decades-data" }}
 {{ stats.scores|json_script:"scores-data" }}
+{{ links|json_script:"links-data" }}
 <script>
 document.addEventListener("DOMContentLoaded", function () {
   var css = getComputedStyle(document.documentElement);
@@ -72,6 +75,9 @@ document.addEventListener("DOMContentLoaded", function () {
   Chart.defaults.font.family = font;
   Chart.defaults.font.size = 12;
 
+  var links = JSON.parse(document.getElementById("links-data").textContent);
+  function pointer(evt, elements) { evt.native.target.style.cursor = elements.length ? "pointer" : "default"; }
+
   function bar(id, dataId, unit) {
     var d = JSON.parse(document.getElementById(dataId).textContent);
     new Chart(document.getElementById(id), {
@@ -80,9 +86,16 @@ document.addEventListener("DOMContentLoaded", function () {
       options: {
         maintainAspectRatio: false,
         animation: reduce ? false : { duration: 300 },
+        onHover: pointer,
+        onClick: function (evt, elements) {
+          if (elements.length) location.href = links.decade.replace("DECADE", d.keys[elements[0].index]);
+        },
         plugins: {
           legend: { display: false },
-          tooltip: { displayColors: false, callbacks: { label: function (c) { return c.parsed.y + " title" + (c.parsed.y === 1 ? "" : "s"); } } }
+          tooltip: { displayColors: false, callbacks: {
+            label: function (c) { return c.parsed.y + " title" + (c.parsed.y === 1 ? "" : "s"); },
+            footer: function () { return "Click to see them"; }
+          } }
         },
         scales: {
           y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: hairline }, border: { display: false } },
@@ -108,11 +121,23 @@ document.addEventListener("DOMContentLoaded", function () {
       maintainAspectRatio: false,
       animation: reduce ? false : { duration: 300 },
       interaction: { mode: "index", intersect: false },
+      onHover: function (evt, elements, chart) {
+        var hit = chart.getElementsAtEventForMode(evt, "nearest", { intersect: true }, true);
+        evt.native.target.style.cursor = hit.length ? "pointer" : "default";
+      },
+      onClick: function (evt, elements, chart) {
+        // Open the exact bar under the pointer: critics or audience, for that score band.
+        var hit = chart.getElementsAtEventForMode(evt, "nearest", { intersect: true }, true);
+        if (!hit.length) return;
+        var which = hit[0].datasetIndex === 0 ? "critics" : "audience";
+        location.href = links[which].replace("BAND", sc.keys[hit[0].index]);
+      },
       plugins: {
         legend: { display: false },
         tooltip: { callbacks: {
           title: function (items) { return "Scored " + items[0].label; },
-          label: function (c) { return " " + c.dataset.label + ": " + c.parsed.y + " title" + (c.parsed.y === 1 ? "" : "s"); }
+          label: function (c) { return " " + c.dataset.label + ": " + c.parsed.y + " title" + (c.parsed.y === 1 ? "" : "s"); },
+          footer: function () { return "Click a bar to see those titles"; }
         } }
       },
       scales: {

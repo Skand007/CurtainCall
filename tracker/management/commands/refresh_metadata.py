@@ -1,4 +1,4 @@
-"""Fetch missing details (genres, directors, runtime) for TMDB titles.
+"""Fetch missing details (genres, people, studios, runtime) for TMDB and MyAnimeList titles.
 
 python manage.py refresh_metadata            # only titles without details
 python manage.py refresh_metadata --all      # refresh everything
@@ -11,22 +11,23 @@ from tracker.models import Title
 
 
 class Command(BaseCommand):
-    help = "Fill in missing metadata from TMDB."
+    help = "Fill in missing metadata from TMDB and MyAnimeList."
 
     def add_arguments(self, parser):
         parser.add_argument("--all", action="store_true", help="refresh titles that already have details")
         parser.add_argument("--limit", type=int, default=0)
 
     def handle(self, *args, **options):
-        qs = Title.objects.filter(source=Title.SOURCE_TMDB)
-        if not options["all"]:
-            qs = qs.filter(details_fetched=False)
+        qs = Title.objects.filter(source__in=[Title.SOURCE_TMDB, Title.SOURCE_MAL])
+        if options["all"]:
+            qs.update(details_fetched=False)
+        qs = qs.filter(details_fetched=False)
         if options["limit"]:
             qs = qs[: options["limit"]]
         done, failed = 0, 0
         for title in qs:
             try:
-                sources.fetch_tmdb_details(title)
+                sources.ensure_details(title)
                 done += 1
             except (sources.SourceError, OSError) as exc:
                 failed += 1

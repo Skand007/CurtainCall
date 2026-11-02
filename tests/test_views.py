@@ -144,12 +144,12 @@ def test_review_retry_and_skip(client_in, user, fake_sources):
     assert other.state == ImportRow.SKIPPED
 
 
-def test_animated_list_searches_anilist_first(client_in, fake_sources):
+def test_animated_list_searches_myanimelist_first(client_in, fake_sources):
     upload(client_in, "Title,Year\nSpirited Away,2001\nCars,2006\n", hint="animated")
     process_all(client_in, ImportBatch.objects.get())
-    assert Title.objects.get(name="Spirited Away").source == "anilist"
+    assert Title.objects.get(name="Spirited Away").source == "mal"
     assert Title.objects.get(name="Cars").source == "tmdb"
-    assert fake_sources[0][0] == "anilist"
+    assert fake_sources[0][0] == "mal"
 
 
 def test_csv_without_title_column_is_rejected(client_in):
@@ -201,13 +201,13 @@ def test_public_profile_and_stats(client, user):
         runtime_minutes=170,
     )
     akira = Title.objects.create(
-        source="anilist",
+        source="mal",
         source_id="47",
-        kind="anime",
+        kind="movie",
         name="Akira",
         year=1988,
         animated=True,
-        directors=["TMS"],
+        studios=["TMS"],
         runtime_minutes=124,
     )
     Entry.objects.create(user=user, title=heat, rating=4.5)
@@ -227,6 +227,7 @@ def test_public_profile_and_stats(client, user):
     assert s["animated"] == 1 and s["live_action"] == 1
     assert s["hours"] == 5  # 294 minutes
     assert s["directors"] == [("Michael Mann", 1)]
+    assert s["studios"] == [("TMS", 1)]
 
 
 def test_delete_entry_marks_import_row_skipped(client_in, user, fake_sources):

@@ -50,12 +50,12 @@ def test_wrong_year_goes_to_review():
     assert state == ImportRow.REVIEW
 
 
-def test_anime_matches_on_romaji_or_synonym():
+def test_japanese_animation_matches_on_romaji_or_synonym():
     anime = cand(
         "Spirited Away",
         2001,
-        source="anilist",
-        kind="anime",
+        source="mal",
+        kind="movie",
         original="Sen to Chihiro no Kamikakushi",
         synonyms=["Chihiro"],
     )
@@ -65,3 +65,12 @@ def test_anime_matches_on_romaji_or_synonym():
 
 def test_no_candidates_is_not_found():
     assert decide("Nothing", 2000, []) == (ImportRow.NOT_FOUND, None)
+
+
+def test_simpler_query_drops_subtitles_and_symbols():
+    from tracker.matching import simpler_query
+
+    assert simpler_query("Demon Slayer: Kimetsu no Yaiba – The Hashira Meeting Arc") == "Demon Slayer"
+    assert simpler_query("[Oshi no Ko] Season 2") == "Oshi no Ko Season 2"
+    assert simpler_query("Tokyo Ghoul √A") == "Tokyo Ghoul A"
+    assert simpler_query("Steins;Gate 0") == "Steins;Gate 0"

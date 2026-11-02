@@ -6,9 +6,9 @@
     <h1>CurtainCall</h1>
     <p class="lede">
       {% if watched_count %}
-        {{ owner_name }}'s films, series and anime: <strong>{{ watched_count|intcomma }} title{{ watched_count|pluralize }} watched</strong>{% if hours %}, about {{ hours|intcomma }} hours in all{% endif %}.
+        {{ owner_name }}'s films and series, live action and animated: <strong>{{ watched_count|intcomma }} title{{ watched_count|pluralize }} watched</strong>{% if hours %}, about {{ hours|intcomma }} hours in all{% endif %}.
       {% else %}
-        {{ owner_name }}'s films, series and anime. Titles appear here as they are added.
+        {{ owner_name }}'s films and series, live action and animated. Titles appear here as they are added.
       {% endif %}
     </p>
     <div class="hero-actions">
@@ -45,9 +45,46 @@
 </section>
 {% endif %}
 
-<section aria-labelledby="all-h">
-  <h2 id="all-h" class="section-title">The whole library</h2>
+<section aria-labelledby="all-h" id="library">
+  <div class="section-head">
+    <h2 id="all-h" class="section-title">The library</h2>
+    {% if editable %}
+      {% if selecting %}
+        <a class="button secondary small" href="?{% for k, v in params.items %}{% if k != 'select' and k != 'page' %}{{ k }}={{ v|urlencode }}&amp;{% endif %}{% endfor %}#library">Done</a>
+      {% else %}
+        <a class="button secondary small" href="?{% for k, v in params.items %}{% if k != 'page' %}{{ k }}={{ v|urlencode }}&amp;{% endif %}{% endfor %}select=1#library">Select titles</a>
+      {% endif %}
+    {% endif %}
+  </div>
   {% include "tracker/_filters.html" %}
+  {% if selecting %}
+    <form id="bulk" class="bulk-bar card" method="post" action="{% url 'bulk_edit' %}">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ request.get_full_path }}">
+      <span><strong id="bulk-count">0</strong> selected</span>
+      <button type="button" class="link" id="bulk-all">Select all on this page</button>
+      <label>Type
+        <select name="kind"><option value="">No change</option>{% for value, label in kind_choices %}{% if value %}<option value="{{ value }}">{% if value == "movie" %}Film{% else %}Series{% endif %}</option>{% endif %}{% endfor %}</select>
+      </label>
+      <label>Style
+        <select name="style"><option value="">No change</option><option value="animated">Animated</option><option value="live">Live action</option></select>
+      </label>
+      <button class="button">Apply to selected</button>
+    </form>
+    <script>
+      (function () {
+        function update() { document.getElementById("bulk-count").textContent = document.querySelectorAll("input[form=bulk]:checked").length; }
+        document.addEventListener("change", function (e) { if (e.target.matches("input[form=bulk]")) update(); });
+        document.getElementById("bulk-all").addEventListener("click", function () {
+          var boxes = document.querySelectorAll("input[form=bulk]");
+          var all = Array.prototype.every.call(boxes, function (b) { return b.checked; });
+          boxes.forEach(function (b) { b.checked = !all; });
+          update();
+        });
+        document.addEventListener("htmx:afterSwap", update);
+      })();
+    </script>
+  {% endif %}
   {% include "tracker/_grid.html" %}
 </section>
 {% endblock %}

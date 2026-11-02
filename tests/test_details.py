@@ -1,4 +1,4 @@
-"""Richer details: TMDB cast/trailer/box office, AniList extras, OMDb scores, formatting."""
+"""Richer details: TMDB cast/trailer/box office, MyAnimeList characters, OMDb scores, formatting."""
 
 import datetime
 
@@ -69,37 +69,55 @@ def test_tmdb_unknown_revenue_is_not_zero_dollars(settings, monkeypatch):
     assert title.box_office_usd is None
 
 
-def test_anilist_extras_are_parsed():
-    media = {
-        "id": 199,
-        "idMal": 199,
-        "title": {"english": "Spirited Away", "romaji": "Sen to Chihiro no Kamikakushi"},
-        "startDate": {"year": 2001, "month": 7, "day": 20},
-        "trailer": {"id": "ByXuk9QqQkk", "site": "youtube"},
-        "bannerImage": "https://img/banner.jpg",
-        "characters": {
-            "edges": [
-                {
-                    "node": {"name": {"full": "Chihiro Ogino"}, "image": {"medium": "https://img/c.jpg"}},
-                    "voiceActors": [{"name": {"full": "Rumi Hiiragi"}}],
-                }
-            ]
+def test_mal_lookup_adds_main_characters_and_japanese_voices(monkeypatch):
+    item = {"mal_id": 199, "title": "Sen to Chihiro no Kamikakushi", "type": "Movie", "episodes": 1}
+    characters = [
+        {
+            "role": "Supporting",
+            "character": {"name": "Yubaba", "images": {"jpg": {"image_url": "https://img/y.jpg"}}},
+            "voice_actors": [{"language": "Japanese", "person": {"name": "Natsuki, Mari"}}],
         },
-    }
-    extra = sources.anilist_candidate(media)["extra"]
-    assert extra["mal_id"] == "199"
-    assert extra["release_date"] == "2001-07-20"
-    assert extra["trailer_key"] == "ByXuk9QqQkk"
-    assert extra["backdrop_url"] == "https://img/banner.jpg"
-    assert extra["cast"] == [{"name": "Rumi Hiiragi", "character": "Chihiro Ogino", "photo": "https://img/c.jpg"}]
+        {
+            "role": "Main",
+            "character": {"name": "Ogino, Chihiro", "images": {"jpg": {"image_url": "https://img/c.jpg"}}},
+            "voice_actors": [
+                {"language": "English", "person": {"name": "Chase, Daveigh"}},
+                {"language": "Japanese", "person": {"name": "Hiiragi, Rumi"}},
+            ],
+        },
+    ]
+
+    def fake_get(path, params=None):
+        return {"data": characters} if path.endswith("/characters") else {"data": item}
+
+    monkeypatch.setattr(sources, "jikan_get", fake_get)
+    c = sources.get_mal("199")
+    assert c["extra"]["cast"] == [{"name": "Rumi Hiiragi", "character": "Chihiro Ogino", "photo": "https://img/c.jpg"}]
 
 
-def test_anilist_search_result_has_no_cast_so_updates_keep_it():
-    extra = sources.anilist_candidate(
-        {"id": 5, "title": {"romaji": "Akira"}, "trailer": {"id": "x", "site": "dailymotion"}}
-    )["extra"]
-    assert extra["cast"] is None
-    assert extra["trailer_key"] == ""  # only YouTube trailers are linked
+@pytest.mark.django_db
+def test_refresh_keeps_what_the_owner_set_by_hand(settings, monkeypatch):
+    settings.TMDB_TOKEN = "t"
+    title = Title.objects.create(
+        source="tmdb",
+        source_id="949",
+        kind="tv",
+        tmdb_type="movie",
+        name="Heat",
+        animated=True,
+        studios=["My Studio"],
+        locked=["kind", "animated", "studios"],
+    )
+    payload = {**TMDB_MOVIE, "production_companies": [{"name": "Forward Pass"}]}
+    monkeypatch.setattr(sources.session, "get", lambda *a, **k: FakeResponse(payload))
+    sources.fetch_tmdb_details(title)
+    title.refresh_from_db()
+    assert (title.kind, title.animated, title.studios) == ("tv", True, ["My Studio"])
+    assert title.runtime_minutes == 170  # the movie path was used, from tmdb_type, not the edited kind
+
+    sources.upsert_title({"source": "tmdb", "source_id": "949", "kind": "movie", "name": "Heat", "animated": False})
+    title.refresh_from_db()
+    assert (title.kind, title.animated) == ("tv", True)
 
 
 def test_parse_omdb():

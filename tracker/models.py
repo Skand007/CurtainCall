@@ -3,33 +3,37 @@ from django.db import models
 
 
 class Title(models.Model):
-    """One film, series or anime, cached from TMDB or AniList."""
+    """One film or series, cached from TMDB or MyAnimeList."""
 
     KIND_MOVIE = "movie"
     KIND_TV = "tv"
-    KIND_ANIME = "anime"
-    KIND_CHOICES = [(KIND_MOVIE, "Movie"), (KIND_TV, "Series"), (KIND_ANIME, "Anime")]
+    KIND_CHOICES = [(KIND_MOVIE, "Film"), (KIND_TV, "Series")]
 
     SOURCE_TMDB = "tmdb"
-    SOURCE_ANILIST = "anilist"
-    SOURCE_CHOICES = [(SOURCE_TMDB, "TMDB"), (SOURCE_ANILIST, "AniList")]
+    SOURCE_MAL = "mal"
+    SOURCE_ANILIST = "anilist"  # old titles only; new ones come from TMDB or MyAnimeList
+    SOURCE_CHOICES = [(SOURCE_TMDB, "TMDB"), (SOURCE_MAL, "MyAnimeList"), (SOURCE_ANILIST, "AniList")]
+
+    # Fields the owner can set by hand. Once set, refreshes leave them alone.
+    LOCKABLE = ["kind", "animated", "studios"]
 
     source = models.CharField(max_length=10, choices=SOURCE_CHOICES)
     source_id = models.CharField(max_length=20)
-    kind = models.CharField(max_length=10, choices=KIND_CHOICES)
+    kind = models.CharField(max_length=10, choices=KIND_CHOICES)  # Film or Series, as shown on the site
+    tmdb_type = models.CharField(max_length=5, blank=True)  # "movie" or "tv": TMDB's own id space, never edited
     name = models.CharField(max_length=300)
     original_name = models.CharField(max_length=300, blank=True)
     year = models.PositiveSmallIntegerField(null=True, blank=True)
     overview = models.TextField(blank=True)
     poster_url = models.URLField(blank=True)
     genres = models.JSONField(default=list, blank=True)
-    directors = models.JSONField(default=list, blank=True)  # directors for films, studios for anime
+    directors = models.JSONField(default=list, blank=True)  # directors (films) or creators (series)
+    studios = models.JSONField(default=list, blank=True)  # lead studios only
+    locked = models.JSONField(default=list, blank=True)  # names of fields set by hand, see LOCKABLE
     runtime_minutes = models.PositiveIntegerField(null=True, blank=True)  # total runtime
     episodes = models.PositiveIntegerField(null=True, blank=True)
     animated = models.BooleanField(default=False)
-    external_score = models.FloatField(
-        null=True, blank=True
-    )  # TMDB vote avg (0-10) / AniList mean (0-100 scaled to 0-10)
+    external_score = models.FloatField(null=True, blank=True)  # TMDB vote average or MyAnimeList score, both 0-10
     details_fetched = models.BooleanField(default=False)
 
     # Richer details, filled by the add flow and the nightly refresh.
@@ -62,9 +66,19 @@ class Title(models.Model):
 
     @property
     def source_url(self):
+        if self.source == self.SOURCE_MAL:
+            return f"https://myanimelist.net/anime/{self.source_id}"
         if self.source == self.SOURCE_ANILIST:
             return f"https://anilist.co/anime/{self.source_id}"
-        return f"https://www.themoviedb.org/{self.kind}/{self.source_id}"
+        return f"https://www.themoviedb.org/{self.tmdb_type or self.kind}/{self.source_id}"
+
+    def save(self, *args, **kwargs):
+        if self.source == self.SOURCE_TMDB and not self.tmdb_type:
+            self.tmdb_type = self.kind  # a new TMDB title: its Film/Series is TMDB's own type
+        super().save(*args, **kwargs)
+
+    def is_locked(self, field):
+        return field in (self.locked or [])
 
     @property
     def imdb_url(self):
@@ -147,8 +161,10 @@ class ImportRow(models.Model):
     raw_title = models.CharField(max_length=300)
     raw_year = models.PositiveSmallIntegerField(null=True, blank=True)
     state = models.CharField(max_length=10, choices=STATE_CHOICES, default=PENDING)
-    candidates = models.JSONField(default=list, blank=True)
-    matched_title = models.ForeignKey(Title, null=True, blank=True, on_delete=models.SET_NULL)
+    candidates = models.JSONField(default=list, blank=True)  # kept after a match so the choice can be undone
+    matched_title = models.ForeignKey(Title, null=True, blank=True, on_delete=models.SET_NULL)  # first pick
+    picked_title_ids = models.JSONField(default=list, blank=True)  # every title this row added, in order
+    created_entry_ids = models.JSONField(default=list, blank=True)  # entries this row created; undo removes them
 
     class Meta:
         ordering = ["id"]

@@ -1,0 +1,23 @@
+{% extends "tracker/base.html" %}
+{% block title %}Refresh details · CurtainCall{% endblock %}
+{% block content %}
+<div class="pagehead"><h1>Refresh details</h1></div>
+<section class="card">
+  <p>The nightly job fills in missing details a few titles at a time. To catch up straight away, run it here and keep the page open.
+  MyAnimeList titles take about a second each, so a few hundred take several minutes.</p>
+  <p><strong>{{ details_left }}</strong> title{{ details_left|pluralize }} waiting for details.</p>
+  {% if details_left %}
+    <div id="refresh-progress">
+      <button class="button" hx-post="{% url 'refresh_run' %}" hx-target="#refresh-progress" hx-swap="innerHTML">Start</button>
+    </div>
+  {% endif %}
+</section>
+
+{% if old_titles %}
+  <h2>Old AniList titles to re-match ({{ old_titles|length }})</h2>
+  <p class="muted" style="max-width:65ch">These came from AniList without a MyAnimeList id, so they can't be refreshed. Re-matching keeps your rating, dates and notes.</p>
+  <ul class="ranked">
+    {% for t in old_titles %}<li><a href="{% url 'title' t.pk %}">{{ t }}</a><a href="{% url 'rematch' t.pk %}">Re-match</a></li>{% endfor %}
+  </ul>
+{% endif %}
+{% endblock %}

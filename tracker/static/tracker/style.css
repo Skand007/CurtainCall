@@ -515,9 +515,11 @@ details.as-table td, details.as-table th { padding: 0.2rem 1rem 0.2rem 0; text-a
   .result { grid-template-columns: 56px minmax(0, 1fr); }
   .result img { width: 56px; }
   .result-actions { grid-column: 1 / -1; }
-  .topbar { gap: 1rem; }
-  .topbar nav { gap: 1rem; }
-  .topbar .owner-tools { margin-left: 0; }
+  .topbar { gap: 0.4rem 1rem; flex-wrap: wrap; position: relative; }  /* three short rows: not worth pinning */
+  .topbar nav { gap: 0.4rem 1rem; flex-basis: 100%; }
+  .topbar .owner-tools { margin-left: 0; flex-wrap: wrap; gap: 0.4rem 1rem; }
+  .topbar a, .topbar .link { white-space: nowrap; }
+  .bulk-bar { top: 0; }
 }
 
 /* ------------------------------------------------------------ accessibility preferences */
@@ -540,3 +542,42 @@ details.as-table td, details.as-table th { padding: 0.2rem 1rem 0.2rem 0; text-a
   .topbar { background: var(--canvas); backdrop-filter: none; -webkit-backdrop-filter: none; border-bottom: 1px solid var(--ink); }
   input, select, textarea { border-color: var(--ink-2); }
 }
+
+/* ------------------------------------------------------------ owner tools: filters from links, selecting, editing */
+#library { scroll-margin-top: 72px; }
+.section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.button.small { min-height: 32px; padding: 0.3rem 0.9rem; font-size: 0.875rem; }
+.active-filters { margin: -0.25rem 0 1rem; }
+.active-filters li { display: inline-flex; align-items: center; gap: 0.35rem; background: color-mix(in srgb, var(--curtain) 12%, transparent); }
+.active-filters a { color: var(--ink-2); font-size: 1rem; line-height: 1; padding: 0 0.15rem; }
+.active-filters a:hover { color: var(--curtain); text-decoration: none; }
+.chips a { color: inherit; }
+.chips li:has(a):hover { background: var(--fill-strong); }
+.ranked a { color: var(--ink); }
+.ranked a:hover { color: var(--curtain); }
+.stats-lede a, .stats-sub a { color: inherit; text-decoration: underline; text-decoration-color: var(--hairline); text-underline-offset: 0.18em; }
+.stats-lede a:hover, .stats-sub a:hover { color: var(--curtain); }
+.bulk-bar { position: sticky; top: 64px; z-index: 5; display: flex; flex-wrap: wrap; gap: 0.75rem 1.25rem; align-items: center; margin-bottom: 1rem; padding: 0.75rem 1rem; }
+.bulk-bar label { display: flex; gap: 0.5rem; align-items: center; margin: 0; }
+.bulk-bar select { width: auto; }
+.pick-card { cursor: pointer; position: relative; }
+.pick-card .art { position: relative; }
+.pick-card input { position: absolute; top: 8px; left: 8px; z-index: 2; width: 22px; height: 22px; min-height: 0; margin: 0; accent-color: var(--curtain); }
+.pick-card:has(input:checked) .art { outline: 3px solid var(--curtain); outline-offset: 2px; }
+.owner-edit summary { cursor: pointer; font-weight: 600; }
+.owner-edit form { margin-top: 0.75rem; }
+.owner-edit .wide { grid-column: 1 / -1; }
+.many-bar { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; margin: 0.5rem 0 0.75rem; }
+.result .tick { width: 20px; height: 20px; min-height: 0; margin: 0; align-self: center; accent-color: var(--curtain); }
+.result .tick-space { width: 20px; }
+.outcomes { list-style: none; padding: 0; margin: 0 0 1rem; }
+.outcomes li { display: flex; gap: 0.5rem; align-items: baseline; flex-wrap: wrap; padding: 0.25rem 0; }
+.added-line { display: inline-flex; gap: 0.6rem; align-items: baseline; }
+form.inline { display: inline; }
+.settled-list { margin-top: 2rem; }
+.settled-list summary { cursor: pointer; font-weight: 600; }
+.settled-list ul { list-style: none; padding: 0; margin: 0.75rem 0 0; }
+.settled { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: baseline; padding: 0.35rem 0; border-bottom: 1px solid var(--hairline); font-size: 0.9375rem; }
+.small { font-size: 0.875rem; }
+.result.tickable { grid-template-columns: 20px 64px minmax(0, 1fr) auto; }
+@media (max-width: 760px) { .result.tickable { grid-template-columns: 20px 56px minmax(0, 1fr); } .result.tickable .result-actions { grid-column: 2 / -1; } }

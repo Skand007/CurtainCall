@@ -1,5 +1,5 @@
 <div id="progress" class="card"
-  {% if progress.pending and not error %}hx-post="{% url 'import_process' batch.pk %}" hx-trigger="load delay:200ms" hx-swap="outerHTML"{% endif %}>
+  {% if progress.pending and not error %}hx-post="{% url 'import_process' batch.pk %}" hx-trigger="load delay:{% if waiting %}20s{% else %}200ms{% endif %}" hx-swap="outerHTML"{% endif %}>
   <div class="bar"><span style="width: {{ progress.percent }}%"></span></div>
   <p>
     {{ progress.done }} of {{ progress.total }} rows checked.
@@ -9,6 +9,8 @@
   {% if error %}
     <p class="error">Stopped: {{ error }}</p>
     <button class="button" hx-post="{% url 'import_process' batch.pk %}" hx-target="#progress" hx-swap="outerHTML">Resume</button>
+  {% elif waiting %}
+    <p class="muted">MyAnimeList allows about 60 searches a minute, so the import is pausing for a few seconds and will carry on by itself.</p>
   {% elif progress.pending %}
     <p class="muted">Matching… keep this page open. If you close it, opening it again picks up where it stopped.</p>
   {% endif %}

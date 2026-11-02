@@ -1,0 +1,12 @@
+<li id="row-{{ row.pk }}" class="settled">
+  <span>{{ row.raw_title }} <span class="muted">{{ row.raw_year|default:"" }}</span></span>
+  {% if row.state == "matched" and row.matched_title %}
+    <span class="muted">→</span> <a href="{% url 'title' row.matched_title.pk %}">{{ row.matched_title }}</a>{% if row.picked_title_ids|length > 1 %} <span class="muted">+{{ row.picked_title_ids|length|add:"-1" }}</span>{% endif %}
+  {% else %}
+    <span class="pill">{{ row.get_state_display }}</span>
+  {% endif %}
+  <form hx-post="{% url 'import_resolve' row.pk %}" hx-target="#row-{{ row.pk }}" hx-swap="outerHTML" class="inline">
+    <input type="hidden" name="compact" value="1">
+    <button class="link" name="action" value="undo">Undo</button>
+  </form>
+</li>

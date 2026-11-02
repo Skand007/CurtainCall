@@ -2,7 +2,12 @@
   <div class="review-head">
     <strong>{{ row.raw_title }}</strong> <span class="muted">{{ row.raw_year|default:"no year" }}</span>
     <span class="pill {% if row.state == 'matched' %}ok{% endif %}">{{ row.get_state_display }}</span>
-    {% if row.matched_title %}<span class="muted">matched to</span> <a href="{% url 'title' row.matched_title.pk %}">{{ row.matched_title }}</a>{% endif %}
+    {% if row.matched_title %}<span class="muted">matched to</span> <a href="{% url 'title' row.matched_title.pk %}">{{ row.matched_title }}</a>{% if row.picked_title_ids|length > 1 %} <span class="muted">and {{ row.picked_title_ids|length|add:"-1" }} more</span>{% endif %}{% endif %}
+    {% if row.state == "matched" or row.state == "skipped" %}
+      <form hx-post="{% url 'import_resolve' row.pk %}" hx-target="#row-{{ row.pk }}" hx-swap="outerHTML" class="inline">
+        <button class="link" name="action" value="undo">Undo</button>
+      </form>
+    {% endif %}
   </div>
 
   {% if row.state == "review" or row.state == "not_found" %}
@@ -10,19 +15,19 @@
       <form hx-post="{% url 'import_resolve' row.pk %}" hx-target="#row-{{ row.pk }}" hx-swap="outerHTML" class="candidates">
         {% for c in row.candidates %}
           <label class="candidate">
-            <input type="radio" name="choice" value="{{ forloop.counter0 }}" required>
+            <input type="checkbox" name="choice" value="{{ forloop.counter0 }}">
             {% if c.poster_url %}<img src="{{ c.poster_url }}" alt="" loading="lazy">{% else %}<span class="noposter small"></span>{% endif %}
-            <span>{{ c.name }} <span class="muted">{{ c.year|default:"no year" }}, {{ c.kind }} from {{ c.source|upper }}</span></span>
+            <span>{{ c.name }} <span class="muted">{{ c.year|default:"no year" }}, {% if c.kind == "movie" %}film{% else %}series{% endif %}{% if c.extra.format %} ({{ c.extra.format }}){% endif %} from {% if c.source == "mal" %}MyAnimeList{% else %}{{ c.source|upper }}{% endif %}</span></span>
           </label>
         {% endfor %}
-        <button class="button" name="action" value="pick">Use selected</button>
+        <button class="button" name="action" value="pick">Add ticked</button>
       </form>
     {% endif %}
     <form hx-post="{% url 'import_resolve' row.pk %}" hx-target="#row-{{ row.pk }}" hx-swap="outerHTML" class="inline-form">
       <input name="title" value="{{ row.raw_title }}" aria-label="Title">
       <input name="year" value="{{ row.raw_year|default:'' }}" size="4" placeholder="Year" aria-label="Year">
-      <select name="kind" aria-label="Type">
-        {% for value, label in kinds %}<option value="{{ value }}" {% if value == "anime" and row.batch.hint == "animated" %}selected{% endif %}>{{ label }}</option>{% endfor %}
+      <select name="kind" aria-label="Search in">
+        {% for value, label in kinds %}<option value="{{ value }}" {% if value == "mal" and row.batch.hint == "animated" %}selected{% endif %}>{{ label }}</option>{% endfor %}
       </select>
       <button class="button secondary" name="action" value="retry">Search again</button>
       <button class="link" name="action" value="skip" formnovalidate>Skip</button>
