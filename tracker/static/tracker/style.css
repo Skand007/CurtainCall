@@ -249,48 +249,33 @@ fieldset label input { width: auto; min-height: 0; margin: 0; }
 .hero .lede strong { color: var(--ink); font-weight: 600; }
 .hero-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
 
-/* ------------------------------------------------------------ banner (library homepage) */
-
-/* The latest watched film's wide image sits behind your name, Apple TV style.
-   A dark scrim at the bottom keeps the white type readable on any picture. */
-.banner {
-  position: relative;
-  isolation: isolate;
+/* The curtain call: the latest posters take a bow, fanned like a line of actors.
+   Hovering one straightens it and lifts it to the front. */
+.curtain-call {
   display: flex;
   align-items: flex-end;
-  justify-content: space-between;
-  gap: 1rem;
-  min-height: 300px;
-  margin: 0.5rem 0 2.5rem;
-  padding: 2rem;
-  border-radius: 20px;
-  overflow: hidden;
-  background: var(--surface);
-  box-shadow: var(--shadow-panel);
+  padding: 1rem 1.5rem 1.5rem;
 }
-.banner.has-image {
-  min-height: clamp(320px, 42vw, 460px);
-  color: #fff;
-  background: #1c1b20 var(--banner) center 30% / cover no-repeat;
+.curtain-call a {
+  display: block;
+  width: 108px;
+  margin-left: -34px;
+  transform: rotate(var(--tilt)) translateY(var(--lift));
+  transform-origin: 50% 100%;
+  transition: transform 220ms var(--press);
 }
-.banner.has-image::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.78) 0%, rgba(0, 0, 0, 0.35) 45%, rgba(0, 0, 0, 0) 75%),
-              linear-gradient(to right, rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0) 60%);
+.curtain-call a:first-child { margin-left: 0; }
+.curtain-call a:hover, .curtain-call a:focus-visible { transform: rotate(0deg) translateY(-10px); z-index: 2; }
+.curtain-call a:active { transform: rotate(0deg) translateY(-6px) scale(0.97); }
+.curtain-call img {
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  border-radius: var(--r-poster);
+  box-shadow: var(--shadow-poster);
+  display: block;
+  background: var(--fill);
 }
-.banner h1 { font-size: clamp(2.5rem, 6vw, 4.25rem); }
-.banner .lede { font-size: 1.25rem; line-height: 1.38; letter-spacing: -0.016em; max-width: 36ch; margin: 0.6rem 0 1.25rem; color: var(--ink-2); }
-.banner.has-image .lede { color: rgba(255, 255, 255, 0.82); }
-.banner .lede strong { color: inherit; font-weight: 650; }
-.banner.has-image .lede strong { color: #fff; }
-.banner-credit { color: rgba(255, 255, 255, 0.75); font-size: 0.8125rem; font-weight: 500; white-space: nowrap; align-self: flex-end; }
-.banner-credit:hover { color: #fff; }
-/* A light glass button for use on top of imagery. */
-.button.light { background: rgba(255, 255, 255, 0.22); color: #fff; -webkit-backdrop-filter: blur(16px) saturate(160%); backdrop-filter: blur(16px) saturate(160%); }
-.banner:not(.has-image) .button.light { background: var(--fill); color: var(--ink); }
 
 /* ------------------------------------------------------------ shelves */
 
@@ -514,9 +499,8 @@ details.as-table td, details.as-table th { padding: 0.2rem 1rem 0.2rem 0; text-a
 /* ------------------------------------------------------------ small screens */
 
 @media (max-width: 760px) {
-  .banner { padding: 1.25rem; border-radius: 16px; flex-direction: column; align-items: flex-start; justify-content: flex-end; margin-top: 0; }
-  .banner.has-image { min-height: 360px; }
-  .banner .lede { font-size: 1.0625rem; }
+  .curtain-call { order: -1; padding: 0.75rem 0 1.75rem 0.75rem; }
+  .curtain-call a { width: 80px; margin-left: -26px; }
   .shelf-row { grid-auto-columns: 112px; gap: 0.8rem; }
   .dup-pair { grid-template-columns: 1fr; }
   .hero { grid-template-columns: 1fr; padding-top: 1.5rem; gap: 1rem; }
@@ -540,11 +524,11 @@ details.as-table td, details.as-table th { padding: 0.2rem 1rem 0.2rem 0; text-a
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: 0.01ms !important; }
-  .button:active, .poster:active .art { transform: none; }
+  .button:active, .poster:active .art, .curtain-call a:active { transform: none; }
+  .curtain-call a:hover, .curtain-call a:focus-visible { transform: rotate(var(--tilt)) translateY(var(--lift)); }
 }
 
 @media (prefers-reduced-transparency: reduce) {
-  .button.light { background: rgba(0, 0, 0, 0.55); -webkit-backdrop-filter: none; backdrop-filter: none; }
   .topbar { background: var(--canvas); -webkit-backdrop-filter: none; backdrop-filter: none; }
   .take { background: var(--surface); -webkit-backdrop-filter: none; backdrop-filter: none; }
   .feature::before { display: none; }

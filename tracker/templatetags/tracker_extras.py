@@ -49,3 +49,12 @@ def hours_minutes(minutes):
     if h >= 10 or m == 0:
         return f"{h} h"
     return f"{h} h {m} min"
+
+
+@register.filter
+def tilt(index):
+    """Fan angle and drop for the nth poster in the homepage stack (0-based), symmetric around the middle one."""
+    angles = [-9, -4.5, 0, 4.5, 9]
+    drops = [14, 4, 0, 4, 14]
+    i = min(int(index), len(angles) - 1)
+    return f"--tilt: {angles[i]}deg; --lift: {drops[i]}px"

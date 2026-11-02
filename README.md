@@ -11,8 +11,8 @@ Film and series data from [TMDB](https://www.themoviedb.org/), anime from [AniLi
 
 - **One library for everything:** films and series from TMDB, anime from AniList, with status
   (watched, watching, planned, dropped), half-star ratings, watch dates and private notes.
-- **Public homepage:** visitors land on the library, with a banner from the latest watched film,
-  "Recently watched" and "Highest rated" shelves, and filters for the full grid.
+- **Public homepage:** visitors land on the library: the five latest posters fanned beside the
+  heading (hover one to lift it), "Recently watched" and "Highest rated" shelves, and filters for the full grid.
 - **Title pages:** full release date, IMDb rating, Rotten Tomatoes critics' score, worldwide box
   office, cast with headshots (main characters and voice actors for anime) and a trailer link.
 - **CSV import with match review:** upload a list (the Letterboxd `Title,Year` format works as is).
@@ -25,7 +25,7 @@ Film and series data from [TMDB](https://www.themoviedb.org/), anime from [AniLi
   directors and anime studios. Every chart has a table view.
 - **Nightly refresh:** a scheduled GitHub Actions job calls a token-protected endpoint in small
   batches to fill missing details and scores, staying inside the OMDb free tier's daily limit.
-- **Quality checks:** 60 tests with all APIs mocked, data-quality checks, linting, all in CI on Postgres.
+- **Quality checks:** 62 tests with all APIs mocked, data-quality checks, linting, all in CI on Postgres.
 
 ## Architecture
 
@@ -72,7 +72,7 @@ Without `DATABASE_URL` the app uses a local SQLite file.
 ## Tests and checks
 
 ```bash
-pytest                       # 60 tests, all API calls mocked
+pytest                       # 62 tests, all API calls mocked
 ruff check . && ruff format --check .
 python manage.py check_data  # data quality checks
 ```
