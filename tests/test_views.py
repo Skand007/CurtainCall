@@ -304,4 +304,13 @@ def test_names_typed_in_capitals_are_shown_normally(db, django_user_model):
 def test_homepage_heading_is_the_site_name_and_the_owner_is_in_the_top_bar(client, owner):
     page = client.get(reverse("home")).content.decode()
     assert "<h1>CurtainCall</h1>" in page
-    assert '<a class="brand" href="/">Skand Gupta</a>' in page
+    assert (
+        '<a class="brand" href="/"><img src="/static/tracker/logo.svg" alt="" width="26" height="26">Skand Gupta</a>'
+        in page
+    )
+
+
+def test_pages_have_the_logo_as_tab_icon(client, owner):
+    page = client.get(reverse("home")).content.decode()
+    assert 'rel="icon"' in page and "logo.svg" in page and "apple-touch-icon" in page
+    assert client.get("/favicon.ico").status_code == 301

@@ -302,3 +302,51 @@ def test_jikan_never_sleeps_long_inside_a_request(monkeypatch):
     monkeypatch.setattr(sources, "_jikan_calls", [sources.time.monotonic()] * sources.JIKAN_PER_MINUTE)
     with pytest.raises(sources.RateLimited):
         sources.jikan_wait()
+
+
+# ---------------------------------------------------------------- backup and link previews
+
+
+def test_backup_has_every_entry_and_reads_back_into_the_importer(client_in, user):
+    import csv
+    import datetime
+    import io
+
+    from django.core.files.uploadedfile import SimpleUploadedFile
+
+    from tracker.views import read_csv_rows
+
+    heat = make("Heat", 1995, genres=["Crime"], studios=["Regency"], imdb_id="tt0113277")
+    away = make("Spirited Away", 2001, source="mal", mal_id="199", animated=True)
+    Entry.objects.create(user=user, title=heat, rating=4.5, watched_on=datetime.date(2024, 5, 1), notes="tense, é")
+    Entry.objects.create(user=user, title=away, status="planned")
+    resp = client_in.get(reverse("export_library"))
+    assert resp["Content-Disposition"].startswith('attachment; filename="curtaincall-backup-')
+    body = resp.content.decode("utf-8-sig")
+    rows = list(csv.DictReader(io.StringIO(body)))
+    assert [r["Title"] for r in rows] == ["Heat", "Spirited Away"]
+    assert rows[0]["Rating"] == "4.5" and rows[0]["WatchedDate"] == "2024-05-01" and rows[0]["Notes"] == "tense, é"
+    assert rows[0]["IMDbID"] == "tt0113277" and rows[0]["Style"] == "Live action"
+    assert rows[1]["Status"] == "Planned" and rows[1]["Style"] == "Animated" and rows[1]["Source"] == "MyAnimeList"
+    assert read_csv_rows(SimpleUploadedFile("b.csv", resp.content)) == [("Heat", 1995), ("Spirited Away", 2001)]
+
+
+def test_backup_needs_login(client):
+    assert client.get(reverse("export_library")).status_code == 302
+
+
+def test_homepage_has_a_link_preview_with_live_numbers(client, library):
+    page = client.get(reverse("home")).content.decode()
+    assert '<meta property="og:title" content="Skand Gupta · CurtainCall">' in page
+    assert "Skand Gupta has watched 3 films and series" in page
+    assert 'property="og:image" content="http://testserver/static/tracker/og-card.jpg"' in page
+    assert 'content="summary_large_image"' in page
+
+
+def test_title_preview_uses_poster_and_rating(client, owner):
+    t = make("Heat", 1995, poster_url="https://img/heat.jpg", overview="A group of high-end professional thieves.")
+    Entry.objects.create(user=owner, title=t, rating=4.5)
+    page = client.get(reverse("title", args=[t.pk])).content.decode()
+    assert '<meta property="og:title" content="Heat (1995) · CurtainCall">' in page
+    assert 'content="Skand Gupta rated it ★★★★½. A group of high-end professional thieves."' in page
+    assert 'property="og:image" content="https://img/heat.jpg"' in page

@@ -13,6 +13,10 @@ Film and series data from [TMDB](https://www.themoviedb.org/), Japanese animatio
   status (watched, watching, planned, dropped), half-star ratings, watch dates and private notes.
 - **Click-through everywhere:** decade bars, score bands, genres, directors and studios on the stats
   page and on title pages open the library filtered to just those titles.
+- **Backup:** one click downloads the whole library (status, ratings, dates, notes, ids) as a CSV
+  that the importer can read back.
+- **Link previews:** sharing the site or a title shows a card (Open Graph) with live numbers or the
+  poster and rating.
 - **Owner tools:** correct a title's type, style and studios (corrections survive refreshes),
   bulk-edit many titles at once, re-match a title to the right database entry without losing the
   rating, and run the refresh from the browser.
@@ -34,7 +38,7 @@ Film and series data from [TMDB](https://www.themoviedb.org/), Japanese animatio
   directors and studios. Every chart has a table view.
 - **Nightly refresh:** a scheduled GitHub Actions job calls a token-protected endpoint in small
   batches to fill missing details and scores, staying inside the OMDb free tier's daily limit.
-- **Quality checks:** 102 tests with all APIs mocked, data-quality checks, linting, all in CI on Postgres.
+- **Quality checks:** 107 tests with all APIs mocked, data-quality checks, linting, all in CI on Postgres.
 
 ## Architecture
 
@@ -82,7 +86,7 @@ Without `DATABASE_URL` the app uses a local SQLite file.
 ## Tests and checks
 
 ```bash
-pytest                       # 102 tests, all API calls mocked
+pytest                       # 107 tests, all API calls mocked
 ruff check . && ruff format --check .
 python manage.py check_data  # data quality checks
 ```

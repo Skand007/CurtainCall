@@ -16,6 +16,7 @@ urlpatterns = [
     path("entry/<int:pk>/update/", views.update_entry, name="update_entry"),
     path("entry/<int:pk>/delete/", views.delete_entry, name="delete_entry"),
     path("import/", views.import_list, name="import_list"),
+    path("export.csv", views.export_library, name="export_library"),
     path("import/<int:pk>/", views.import_detail, name="import_detail"),
     path("import/<int:pk>/process/", views.import_process, name="import_process"),
     path("import/<int:pk>/unmatched.csv", views.import_unmatched, name="import_unmatched"),

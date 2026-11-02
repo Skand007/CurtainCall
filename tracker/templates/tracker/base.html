@@ -4,16 +4,29 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}{% if site_owner_name %}{{ site_owner_name }} · {% endif %}CurtainCall{% endblock %}</title>
-  <meta name="description" content="{% if site_owner_name %}{{ site_owner_name }}'s{% else %}A{% endif %} library of films and series, with ratings and stats.">
+  <meta name="description" content="{{ og_description }}">
+  {# Link previews on LinkedIn, WhatsApp, Slack, X and the like #}
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="CurtainCall">
+  <meta property="og:title" content="{{ og_title }}">
+  <meta property="og:description" content="{{ og_description }}">
+  <meta property="og:url" content="{{ og_url }}">
+  <meta property="og:image" content="{{ og_image }}">
+  {% if og_image_is_card %}<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="CurtainCall: red curtains drawn back on a stage with a gold star">{% endif %}
+  <meta name="twitter:card" content="{% if og_image_is_card %}summary_large_image{% else %}summary{% endif %}">
   <meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#1c1b20" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="{% static 'tracker/logo.svg' %}" type="image/svg+xml">
+  <link rel="icon" href="{% static 'tracker/favicon-32.png' %}" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="{% static 'tracker/apple-touch-icon.png' %}">
   <link rel="stylesheet" href="{% static 'tracker/style.css' %}">
   <script src="https://unpkg.com/htmx.org@2.0.4" defer></script>
   {% block head %}{% endblock %}
 </head>
 <body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
   <header class="topbar">
-    <a class="brand" href="{% url 'home' %}">{{ site_owner_name|default:"CurtainCall" }}</a>
+    <a class="brand" href="{% url 'home' %}"><img src="{% static 'tracker/logo.svg' %}" alt="" width="26" height="26">{{ site_owner_name|default:"CurtainCall" }}</a>
     <nav aria-label="Main">
       <a href="{% url 'home' %}" {% if request.resolver_match.url_name == 'home' or request.resolver_match.url_name == 'library' or request.resolver_match.url_name == 'profile' %}aria-current="page"{% endif %}>Library</a>
       {% if site_owner %}<a href="{% url 'stats' site_owner.username %}" {% if request.resolver_match.url_name == 'stats' %}aria-current="page"{% endif %}>Stats</a>{% endif %}

@@ -23,6 +23,7 @@ from django.views.decorators.http import require_POST
 from . import dedup, matching, sources
 from .models import Entry, ImportBatch, ImportRow, Title
 from .stats import SCORE_BANDS, audience_score, band_of, library_stats
+from .templatetags.tracker_extras import stars
 
 log = logging.getLogger(__name__)
 
@@ -187,6 +188,11 @@ def library_page(request, owner):
     }
     if is_htmx(request):
         return render(request, "tracker/_grid.html", context)
+    count, hours = context["watched_count"], context["hours"]
+    context["og_description"] = (
+        f"{context['owner_name']} has watched {count:,} film{'s' if count != 1 else ''} and series, "
+        f"about {hours:,} hours in all. Browse the library, ratings and stats."
+    )
 
     genres = sorted(
         {g for gs in Title.objects.filter(entries__user=owner).values_list("genres", flat=True) for g in gs}
@@ -243,6 +249,11 @@ def stats(request, username):
         "genre_rows": [(name, n, link(genre=name)) for name, n in data["genres"]],
         "director_rows": [(name, n, link(director=name)) for name, n in data["directors"]],
         "studio_rows": [(name, n, link(studio=name)) for name, n in data["studios"]],
+        "og_title": f"{display_name(owner)}'s stats · CurtainCall",
+        "og_description": (
+            f"{data['total']:,} titles watched, about {data['hours']:,} hours: {data['live_action']:,} live action "
+            f"and {data['animated']:,} animated, by decade, genre, director, studio and score."
+        ),
         "links": {
             "all": link(status="watched"),
             "animated": link(style="animated", status="watched"),
@@ -268,7 +279,19 @@ def title_detail(request, pk):
         public_entry = Entry.objects.filter(user=owner, title=title).first()
     is_owner = owner is not None and request.user == owner
     link_owner = owner or (request.user if request.user.is_authenticated else None)
+    # Link preview: the owner's rating (if any) and the start of the overview, with the poster.
+    overview = " ".join((title.overview or "").split())
+    if len(overview) > 220:
+        overview = overview[:220].rsplit(" ", 1)[0] + "…"
+    owner_entry = Entry.objects.filter(user=owner, title=title).first() if owner else None
+    rated = (
+        f"{display_name(owner)} rated it {stars(owner_entry.rating)}. " if owner_entry and owner_entry.rating else ""
+    )
+    preview = {"og_title": f"{title} · CurtainCall", "og_description": (rated + overview).strip() or f"{title}."}
+    if title.poster_url:
+        preview.update(og_image=title.poster_url, og_image_is_card=False)
     context = {
+        **preview,
         "title": title,
         "entry": viewer_entry,
         "public_entry": public_entry,
@@ -690,6 +713,62 @@ def import_detail(request, pk):
         "kinds": RETRY_KINDS,
     }
     return render(request, "tracker/import_detail.html", context)
+
+
+BACKUP_COLUMNS = [
+    "Title",
+    "Year",
+    "Type",
+    "Style",
+    "Status",
+    "Rating",
+    "WatchedDate",
+    "Notes",
+    "Genres",
+    "Directors",
+    "Studios",
+    "Source",
+    "SourceID",
+    "IMDbID",
+    "MyAnimeListID",
+    "Added",
+]
+
+
+@login_required
+def export_library(request):
+    """Everything in your library as one CSV: a backup you keep, and a file the importer reads back
+    (it uses the Title and Year columns)."""
+    response = HttpResponse(content_type="text/csv; charset=utf-8")
+    stamp = timezone.localdate().isoformat()
+    response["Content-Disposition"] = f'attachment; filename="curtaincall-backup-{stamp}.csv"'
+    response.write("\ufeff")  # so Excel opens accents correctly
+    writer = csv.writer(response)
+    writer.writerow(BACKUP_COLUMNS)
+    entries = Entry.objects.filter(user=request.user).select_related("title").order_by("title__name", "title__year")
+    for e in entries:
+        t = e.title
+        writer.writerow(
+            [
+                t.name,
+                t.year or "",
+                t.get_kind_display(),
+                "Animated" if t.animated else "Live action",
+                e.get_status_display(),
+                e.rating if e.rating is not None else "",
+                e.watched_on.isoformat() if e.watched_on else "",
+                e.notes,
+                "; ".join(t.genres),
+                "; ".join(t.directors),
+                "; ".join(t.studios),
+                t.get_source_display(),
+                t.source_id,
+                t.imdb_id,
+                t.mal_id,
+                e.created_at.date().isoformat(),
+            ]
+        )
+    return response
 
 
 @login_required

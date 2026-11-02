@@ -107,7 +107,8 @@ code { background: var(--fill); padding: 0.05em 0.35em; border-radius: 5px; font
 }
 html[data-scrolled] .topbar::after { opacity: 1; }
 
-.brand { color: var(--ink); font-weight: 700; font-size: 1.125rem; letter-spacing: -0.02em; }
+.brand { color: var(--ink); font-weight: 700; font-size: 1.125rem; letter-spacing: -0.02em; display: inline-flex; align-items: center; gap: 0.5rem; }
+.brand img { border-radius: 6px; flex: none; }
 .brand:hover { text-decoration: none; }
 .topbar nav { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; flex: 1; }
 .topbar nav a { color: var(--ink); font-size: 0.9375rem; }
@@ -581,3 +582,6 @@ form.inline { display: inline; }
 .small { font-size: 0.875rem; }
 .result.tickable { grid-template-columns: 20px 64px minmax(0, 1fr) auto; }
 @media (max-width: 760px) { .result.tickable { grid-template-columns: 20px 56px minmax(0, 1fr); } .result.tickable .result-actions { grid-column: 2 / -1; } }
+.backup { display: flex; gap: 1rem 2rem; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.backup h2 { margin-top: 0; }
+.backup p { margin-bottom: 0; max-width: 70ch; }

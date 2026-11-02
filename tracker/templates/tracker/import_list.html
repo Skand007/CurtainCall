@@ -2,6 +2,7 @@
 {% block title %}Import · CurtainCall{% endblock %}
 {% block content %}
 <div class="pagehead"><h1>Import a list</h1><a href="{% url 'duplicates' %}">Check for duplicates</a></div>
+
 <section class="card">
   <p>Upload a CSV with a <code>Title</code> column and an optional <code>Year</code> column (the Letterboxd import format works as is).
   Each row is matched to TMDB or MyAnimeList; anything ambiguous waits for you to pick. Lists with a lot of
@@ -16,6 +17,15 @@
     </fieldset>
     <button class="button">Upload</button>
   </form>
+</section>
+
+<section class="card backup">
+  <div>
+    <h2>Back up your library</h2>
+    <p class="muted">One CSV with every title: status, rating, watch date, private notes, genres, studios and database ids.
+    Keep a copy somewhere safe. If you ever need it, the importer above reads its Title and Year columns back in.</p>
+  </div>
+  <a class="button secondary" href="{% url 'export_library' %}" download>Download backup</a>
 </section>
 
 {% if batches %}
