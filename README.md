@@ -3,6 +3,8 @@
 A personal tracker for films and series, live action and animated, in one library, with metadata
 pulled from [TMDB](https://www.themoviedb.org/) and [MyAnimeList](https://myanimelist.net/) (through [Jikan](https://jikan.moe/)).
 
+<img width="1200" height="630" alt="og-card" src="https://github.com/user-attachments/assets/8de4d9c8-c03f-439b-b768-1e2be8fffb81" />
+
 **Live site:** https://curtaincall-ybpj.onrender.com/
 
 Film and series data from [TMDB](https://www.themoviedb.org/), Japanese animation from [MyAnimeList](https://myanimelist.net/) via [Jikan](https://jikan.moe/), IMDb ratings and Rotten Tomatoes critics' scores via [OMDb](https://www.omdbapi.com/).
